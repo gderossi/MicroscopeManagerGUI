@@ -13,5 +13,6 @@ public:
 	Ui::QtSerialConfigBox* getUi();
 
 private:
+	void adjustParentHeight(int offset);
 	Ui::QtSerialConfigBox ui;
 };

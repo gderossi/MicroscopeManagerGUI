@@ -52,6 +52,7 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 		file << '\n';
 
 		file << "EXPERIMENT_SETTINGS\n";
+		bool experimentSettingsDevice = false;
 		for (int i = 1; i < cfg->serialScrollChild->children().size(); i++)
 		{
 			QtSerialConfigBox* s = (QtSerialConfigBox*)cfg->serialScrollChild->children()[i];
@@ -63,8 +64,14 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 				line = ui->deviceNameLineEdit->text().toUtf8().constData();
 				line += '\n';
 				file << line;
+				experimentSettingsDevice = true;
 				break;
 			}
+		}
+		if (!experimentSettingsDevice)
+		{
+			line = "\n";
+			file << line;
 		}
 		line = std::to_string(cfg->framesPerVolumeSpinBox->value());
 		line += "\n";
@@ -77,6 +84,41 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 		file << line;
 		line = std::to_string(cfg->volumeRangeMaxDoubleSpinBox->value());
 		line += "\n\n";
+		file << line;
+
+		file << "ODORANT_SETTINGS\n";
+		if (cfg->odorantScrollChild->children().size() > 1)
+		{
+			for (int i = 1; i < cfg->odorantScrollChild->children().size(); i++)
+			{
+				OdorantConfigBox* o = (OdorantConfigBox*)cfg->odorantScrollChild->children()[i];
+				Ui::OdorantConfigBox* odorantUi = o->getUi();
+
+				line = std::to_string(odorantUi->odorantComboBox->currentData().toInt());
+				line += '\n';
+				file << line;
+			}
+		}
+		line = "\n";
+		file << line;
+
+		file << "STATE_SETTINGS\n";
+		if (cfg->stateScrollChild->children().size() > 1)
+		{
+			for (int i = 1; i < cfg->stateScrollChild->children().size(); i++)
+			{
+				StateConfigBox* st = (StateConfigBox*)cfg->stateScrollChild->children()[i];
+				Ui::StateConfigBox* stateUi = st->getUi();
+
+				line = std::to_string(stateUi->stateComboBox->currentData().toInt());
+				line += '\n';
+				file << line;
+				line = std::to_string(stateUi->durationSpinBox->value());
+				line += '\n';
+				file << line;
+			}
+		}
+		line = "\n";
 		file << line;
 
 		if (!cfg->serialScrollChild->children().isEmpty())
@@ -251,7 +293,43 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 				getline(file, line);
 				volumeScaleMin = atof(line.c_str());
 				getline(file, line);
-				volumeScaleMax = atof(line.c_str());                    
+				volumeScaleMax = atof(line.c_str());
+			}
+
+			if (line == "ODORANT_SETTINGS")
+			{
+				while (getline(file, line))
+				{
+					if (line == "")
+					{
+						break;
+					}
+
+					OdorantConfigBox* o = new OdorantConfigBox(ui->odorantOrderScrollAreaContents);
+					ui->odorantOrderScrollAreaContents->layout()->addWidget(o);
+					Ui::OdorantConfigBox* oUi = o->getUi();
+					oUi->odorantComboBox->setCurrentIndex(atoi(line.c_str())-1);
+					o->show();
+				}
+			}
+
+			if (line == "STATE_SETTINGS")
+			{
+				while (getline(file, line))
+				{
+					if (line == "")
+					{
+						break;
+					}
+
+					StateConfigBox* s = new StateConfigBox(ui->stateOrderScrollAreaContents);
+					ui->stateOrderScrollAreaContents->layout()->addWidget(s);
+					Ui::StateConfigBox* sUi = s->getUi();
+					sUi->stateComboBox->setCurrentIndex((atoi(line.c_str())/0x00010000)-1);
+					getline(file, line);
+					sUi->durationSpinBox->setValue(atoi(line.c_str()));
+					s->show();
+				}
 			}
 
 			//Serial config

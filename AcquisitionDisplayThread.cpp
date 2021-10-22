@@ -4,11 +4,20 @@ AcquisitionDisplayThread::AcquisitionDisplayThread(unsigned long long bufferCoun
 	bufferCount_(bufferCount),
 	mm_(mm),
 	displayFrame_(displayFrame),
-	buf_(new unsigned char[1920*1080]),
-	acqThd_(&AcquisitionDisplayThread::Acquire, this),
-	disThd_(&AcquisitionDisplayThread::Display, this),
 	targetFrameInfo_(targetFrameInfo)
-{}
+{
+	width = mm->GetCameraIntParameter(STREAM_MODULE, "Width");
+	height = mm->GetCameraIntParameter(STREAM_MODULE, "Height");
+	buf_ = new unsigned char[width * height];
+
+	acqThd_ = std::thread(&AcquisitionDisplayThread::Acquire, this);
+	disThd_ = std::thread(&AcquisitionDisplayThread::Display, this);
+}
+
+AcquisitionDisplayThread::~AcquisitionDisplayThread()
+{
+	delete buf_;
+}
 
 void AcquisitionDisplayThread::Acquire()
 {
@@ -31,7 +40,7 @@ void AcquisitionDisplayThread::Display()
 		if (bufferCount_ % targetFrameInfo_[0] == targetFrameInfo_[1])
 		{
 			std::memcpy(buf_, mm_->GetImageBuffer(), mm_->GetImageBufferSize());
-			img_ = QImage(buf_, 1920, 1080, 1920, QImage::Format_Grayscale8, NULL, NULL);
+			img_ = QImage(buf_, width, height, width, QImage::Format_Grayscale8, NULL, NULL);
 			displayFrame_->setPixmap(QPixmap::fromImage(img_));
 		}
 	}

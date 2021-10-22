@@ -9,6 +9,7 @@ class AcquisitionDisplayThread :
 {
 public:
 	AcquisitionDisplayThread(unsigned long long bufferCount, MicroscopeManager* mm, QLabel* displayFrame, int* targetFrameInfo);
+	~AcquisitionDisplayThread();
 	void WaitForThread();
 
 private:
@@ -23,5 +24,7 @@ private:
 	QImage img_;
 	QLabel* displayFrame_;
 	int* targetFrameInfo_;
+	unsigned long long width;
+	unsigned long long height;
 };
 

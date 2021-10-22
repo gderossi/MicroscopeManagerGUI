@@ -13,5 +13,6 @@ public:
 	Ui::StateConfigBox* getUi();
 
 private:
+	void adjustParentHeight(int offset);
 	Ui::StateConfigBox ui;
 };

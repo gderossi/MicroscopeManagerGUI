@@ -1,21 +1,28 @@
 #include "MicroscopeManagerGUI.h"
 #include "AcquisitionDisplayThread.h"
+#include "DisplayThread.h"
 #include "SerialConsoleThread.h"
 #include "ConfigManager.h"
 #include "ConfigDialog.h"
 #include "ConnectSerialDeviceDialog.h"
+#include "OdorantConfigBox.h"
+#include "StateConfigBox.h"
 #include <QtWidgets>
+#include <algorithm>
+#include <random>
 
 #define DEFAULT_FRAMES_PER_VOLUME 20
 #define DEFAULT_VOLUMES_PER_SECOND 20
 #define VOLUME_SCALE_SLIDER_MULTIPLIER 1000
+#define START_EXPERIMENT_DEVICE '0'
 
 MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     QMainWindow(parent),
     mm(new MicroscopeManager("D:/test")),
-    buf(new unsigned char[1920*1080]),
+    buf(NULL),
     cameraThd(NULL),
     acquiring(false),
+    experimentActive(false),
     fileOpened(false),
     filepath(""),
     imageCount(0),
@@ -25,7 +32,18 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     volumesPerSecond(DEFAULT_VOLUMES_PER_SECOND)
 {
     ui.setupUi(this);
-    readConfig();
+
+    ui.odorantOrderScrollAreaContents->setLayout(new QVBoxLayout());
+    ui.stateOrderScrollAreaContents->setLayout(new QVBoxLayout());
+
+    startupMenu();
+
+    width = mm->GetCameraIntParameter(STREAM_MODULE, "Width");
+    height = mm->GetCameraIntParameter(STREAM_MODULE, "Height");
+
+    buf = new unsigned char[width * height];
+
+    ui.experimentButtonsFrame->setVisible(false);
 
     volumeScale = new RangeSlider(Qt::Horizontal, RangeSlider::Option::DoubleHandles, nullptr);
     ui.experimentSettingsInnerLayout->insertWidget(1, volumeScale);
@@ -44,6 +62,8 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     ui.frameSelectSlider->setMaximum(framesPerVolume-1);
 
     targetFrameInfo = new int[2];
+    targetFrameInfo[0] = framesPerVolume;
+    targetFrameInfo[1] = 0;
 
     //File menu
     connect(ui.action_Filename, &QAction::triggered, this, &MicroscopeManagerGUI::setFilename);
@@ -58,7 +78,11 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
 
     //Camera control
     connect(ui.snapImageButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::snapImage);
-    connect(ui.acquireButton, &QPushButton::toggled, this, &MicroscopeManagerGUI::acquireHelper);
+    connect(ui.acquireButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::acquireHelper);
+    connect(ui.liveViewButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::liveHelper);
+    connect(ui.setupExperimentButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::experimentSetup);
+    connect(ui.startExperimentButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::startExperiment);
+    connect(ui.stopExperimentButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::stopExperiment);
     connect(ui.frameSelectSlider, &QSlider::valueChanged, this, &MicroscopeManagerGUI::setTargetFrame);
 
     //Experiment settings
@@ -68,6 +92,10 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     connect(ui.volumeMax, &QDoubleSpinBox::valueChanged, this, &MicroscopeManagerGUI::setVolumeScaleSliderMax);
     connect(ui.framesPerVolumeSpinBox, &QSpinBox::valueChanged, this, &MicroscopeManagerGUI::setFramesPerVolume);
     connect(ui.volumesPerSecondSpinBox, &QSpinBox::valueChanged, this, &MicroscopeManagerGUI::setVolumesPerSecond);
+
+    connect(ui.addOdorantButton, &QToolButton::clicked, this, &MicroscopeManagerGUI::addOdorant);
+    connect(ui.shuffleOdorantsButton, &QToolButton::clicked, this, &MicroscopeManagerGUI::shuffleOdorants);
+    connect(ui.addStateButton, &QToolButton::clicked, this, &MicroscopeManagerGUI::addState);
 }
 
 MicroscopeManagerGUI::~MicroscopeManagerGUI()
@@ -95,8 +123,15 @@ void MicroscopeManagerGUI::readConfig()
 {
     ConfigManager cfg;
     configFile = QFileDialog::getOpenFileName().toUtf8().constData();
-    cfg.ReadConfigFile(configFile, mm, &ui);
-    cfg.GetExperimentSettings(&volumeScaleMin, &volumeScaleMax, &framesPerVolume, &volumesPerSecond, &experimentSettingsDevice);
+    if (configFile == "")
+    {
+        defaultStartup();
+    }
+    else
+    {
+        cfg.ReadConfigFile(configFile, mm, &ui);
+        cfg.GetExperimentSettings(&volumeScaleMin, &volumeScaleMax, &framesPerVolume, &volumesPerSecond, &experimentSettingsDevice);
+    }
 }
 
 void MicroscopeManagerGUI::snapImage()
@@ -114,16 +149,16 @@ void MicroscopeManagerGUI::snapImage()
 
     mm->SnapImage();
     std::memcpy(buf, mm->GetImageBuffer(), mm->GetImageBufferSize());
-    img = QImage(buf, 1920, 1080, 1920, QImage::Format_Grayscale8, NULL, NULL);
+    img = QImage(buf, width, height, width, QImage::Format_Grayscale8, NULL, NULL);
     ui.imageDisplay->setPixmap(QPixmap::fromImage(img));
 
-    mm->WriteFile(buf, 1920 * 1080);
+    mm->WriteFile(buf, width * height);
     mm->CloseFile();
 }
 
 void MicroscopeManagerGUI::acquireHelper()
 {
-    if (ui.acquireButton->isChecked())
+    if (!acquiring)
     {
         acquireStart();
     }
@@ -135,22 +170,22 @@ void MicroscopeManagerGUI::acquireHelper()
 
 void MicroscopeManagerGUI::acquireStart()
 {
-    if (!acquiring)
+    if (filepath == "")
     {
-        if (filepath == "")
-        {
-            setFilename();
-        }
-
-        ui.acquireButton->setText("Stop Acquisition");
-
-        mm->SetFilename(filepath);
-        mm->CreateFile();
-
-        mm->StartAcquisition(GENTL_INFINITE);
-        cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
-        acquiring = true;
+        setFilename();
     }
+
+    ui.acquireButton->setText("Stop Acquisition");
+    ui.liveViewButton->setEnabled(false);
+    ui.snapImageButton->setEnabled(false);
+    ui.setupExperimentButton->setEnabled(false);
+
+    mm->SetFilename(filepath);
+    mm->CreateFile();
+
+    mm->StartAcquisition(GENTL_INFINITE);
+    cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+    acquiring = true;
 }
 
 void MicroscopeManagerGUI::acquireStop()
@@ -161,14 +196,59 @@ void MicroscopeManagerGUI::acquireStop()
         cameraThd->WaitForThread();
         delete cameraThd;
         cameraThd = NULL;
-
-        acquiring = false;
     }
 
     mm->StopAcquisition();
     mm->CloseFile();
 
     ui.acquireButton->setText("Start Acquisition");
+    ui.liveViewButton->setEnabled(true);
+    ui.snapImageButton->setEnabled(true);
+    ui.setupExperimentButton->setEnabled(true);
+    acquiring = false;
+}
+
+void MicroscopeManagerGUI::liveHelper()
+{
+    if (!acquiring)
+    {
+        liveStart();
+    }
+    else
+    {
+        liveStop();
+    }
+}
+
+void MicroscopeManagerGUI::liveStart()
+{
+    ui.liveViewButton->setText("Stop Live View");
+    ui.snapImageButton->setEnabled(false);
+    ui.acquireButton->setEnabled(false);
+    ui.setupExperimentButton->setEnabled(false);
+
+    mm->StartAcquisition(GENTL_INFINITE);
+    cameraThd = new DisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+    acquiring = true;
+}
+
+void MicroscopeManagerGUI::liveStop()
+{
+    if (cameraThd)
+    {
+        cameraThd->StopThread();
+        cameraThd->WaitForThread();
+        delete cameraThd;
+        cameraThd = NULL;
+    }
+
+    mm->StopAcquisition();
+
+    ui.liveViewButton->setText("Live View");
+    ui.snapImageButton->setEnabled(true);
+    ui.acquireButton->setEnabled(true);
+    ui.setupExperimentButton->setEnabled(true);
+    acquiring = false;
 }
 
 void MicroscopeManagerGUI::setFilename()
@@ -308,6 +388,108 @@ void MicroscopeManagerGUI::setTargetFrame()
     targetFrameInfo[1] = ui.frameSelectSlider->value();
 }
 
+void MicroscopeManagerGUI::experimentSetup()
+{
+    if (!acquiring)
+    {
+        if (experimentSettingsDevice != "")
+        {
+            std::string startCommand = "" + START_EXPERIMENT_DEVICE + '\r';
+            mm->SerialWrite(experimentSettingsDevice, startCommand.c_str(), startCommand.size());
+        }
+
+        if (filepath == "")
+        {
+            setFilename();
+        }
+
+        mm->SetFilename(filepath);
+        mm->CreateFile();
+        mm->StartAcquisition(GENTL_INFINITE);
+        cameraThd = new DisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+
+        ui.cameraButtonsFrame->setVisible(false);
+        ui.experimentButtonsFrame->setVisible(true);
+        acquiring = true;
+    }
+}
+
+void MicroscopeManagerGUI::startExperiment()
+{
+    if (!experimentActive)
+    {
+        if (cameraThd)
+        {
+            cameraThd->StopThread();
+            cameraThd->WaitForThread();
+            delete cameraThd;
+        }
+
+        cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+
+        if (experimentSettingsDevice != "")
+        {
+            std::string startCommand = "" + START_EXPERIMENT_DEVICE + '\r';
+            mm->SerialWrite(experimentSettingsDevice, startCommand.c_str(), startCommand.size());
+        }
+    }
+}
+
+void MicroscopeManagerGUI::stopExperiment()
+{
+    acquiring = false;
+    experimentActive = false;
+
+    if (cameraThd)
+    {
+        cameraThd->StopThread();
+        cameraThd->WaitForThread();
+        delete cameraThd;
+        cameraThd = NULL;
+    }
+
+    mm->StopAcquisition();
+    mm->CloseFile();
+
+    ui.experimentButtonsFrame->setVisible(false);
+    ui.cameraButtonsFrame->setVisible(true);
+}
+
+void MicroscopeManagerGUI::addOdorant()
+{
+    OdorantConfigBox* o = new OdorantConfigBox(ui.odorantOrderScrollAreaContents);
+    ui.odorantOrderScrollAreaContents->layout()->addWidget(o);
+}
+
+void MicroscopeManagerGUI::shuffleOdorants()
+{
+    std::vector<int> odorants;
+    QObjectList odorantList = ui.odorantOrderScrollAreaContents->children();
+
+    if (odorantList.size() > 1)
+    {
+        for (int i = 1; i < odorantList.size(); i++)
+        {
+            OdorantConfigBox* o = (OdorantConfigBox*)odorantList[i];
+            odorants.push_back(o->getUi()->odorantComboBox->currentData().toInt());
+        }
+
+        std::shuffle(odorants.begin(), odorants.end(), std::default_random_engine());
+
+        for (int i = 1; i < odorantList.size(); i++)
+        {
+            OdorantConfigBox* o = (OdorantConfigBox*)odorantList[i];
+            o->getUi()->odorantComboBox->setCurrentIndex(odorants[i-1] - 1);
+        }
+    }
+}
+
+void MicroscopeManagerGUI::addState()
+{
+    StateConfigBox* s = new StateConfigBox(ui.stateOrderScrollAreaContents);
+    ui.stateOrderScrollAreaContents->layout()->addWidget(s);
+}
+
 
 void MicroscopeManagerGUI::writeExperimentParameter(char parameter, std::string data)
 {
@@ -315,4 +497,25 @@ void MicroscopeManagerGUI::writeExperimentParameter(char parameter, std::string 
     unsigned long long writeSize = data.size();
 
     mm->SerialWrite(experimentSettingsDevice, data.c_str(), writeSize);
+}
+
+void MicroscopeManagerGUI::startupMenu()
+{
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "Welcome", "Wecome to Microscope Manager. Would you like to load a configuration?", QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes)
+    {
+        readConfig();
+    }
+    else
+    {
+        defaultStartup();
+    }
+}
+
+void MicroscopeManagerGUI::defaultStartup()
+{
+    mm->CreateImageManager("Raw", NULL);
+    mm->CreateCameraManager("FLIR", NULL);
+    mm->CreateSerialManager("Windows", NULL);
 }

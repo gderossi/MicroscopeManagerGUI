@@ -17,38 +17,56 @@ public:
 private slots:
     void writeConfig();
     void readConfig();
+
     void snapImage();
     void acquireHelper();
     void acquireStart();
     void acquireStop();
+    void liveHelper();
+    void liveStart();
+    void liveStop();
+    void experimentSetup();
+    void startExperiment();
+    void stopExperiment();
+    void setTargetFrame();
+
     void setFilename();
     void connectSerialDevice();
     void disconnectSerialDevice();
     void writeToSerialDevice();
     void readFromSerialDevice();
+
     void setVolumeScaleSliderMin();
     void setVolumeScaleSliderMax();
     void setVolumeScaleMin();
     void setVolumeScaleMax();
     void setFramesPerVolume();
     void setVolumesPerSecond();
-    void setTargetFrame();
+
+    void addOdorant();
+    void shuffleOdorants();
+    void addState();
 
 private:
+    void startupMenu();
+    void defaultStartup();
     void writeExperimentParameter(char parameter, std::string data);
-
 
     Ui::MicroscopeManagerGUIClass ui;
     MicroscopeManager* mm;
     std::string configFile;
     unsigned char * buf;
     QImage img;
+    unsigned long long width;
+    unsigned long long height;
     MMThread* cameraThd;
     bool acquiring;
+    bool experimentActive;
     bool fileOpened;
     std::string filepath;
     int imageCount;
     std::map<std::string, MMThread*> serialThds;
+
     RangeSlider* volumeScale;
     double volumeScaleMin;
     double volumeScaleMax;

@@ -285,7 +285,14 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QSpinBox" name="framesPerVolumeSpinBox"/>
+       <widget class="QSpinBox" name="framesPerVolumeSpinBox">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>9999</number>
+        </property>
+       </widget>
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="volumesPerSecondLabel">
@@ -295,7 +302,14 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QSpinBox" name="volumesPerSecondSpinBox"/>
+       <widget class="QSpinBox" name="volumesPerSecondSpinBox">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>9999</number>
+        </property>
+       </widget>
       </item>
       <item row="2" column="0">
        <widget class="QLabel" name="volumeRangeMinLabel">

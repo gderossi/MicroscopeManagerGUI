@@ -13,5 +13,6 @@ public:
 	Ui::OdorantConfigBox* getUi();
 
 private:
+	void adjustParentHeight(int offset);
 	Ui::OdorantConfigBox ui;
 };
