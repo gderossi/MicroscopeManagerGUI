@@ -19,7 +19,7 @@
      <x>0</x>
      <y>0</y>
      <width>401</width>
-     <height>511</height>
+     <height>563</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="settingsLayout">
@@ -357,6 +357,52 @@
         </property>
        </widget>
       </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="laserModeLabel">
+        <property name="text">
+         <string>Laser Mode</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="laserModeComboBox">
+        <item>
+         <property name="text">
+          <string>Both Lasers</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Laser 1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Laser 2</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="resonantScannerRangeLabel">
+        <property name="text">
+         <string>Resonant Scanner Range</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QDoubleSpinBox" name="resonantScannerRangeDoubleSpinBox">
+        <property name="decimals">
+         <number>3</number>
+        </property>
+        <property name="maximum">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="value">
+         <double>1.000000000000000</double>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>
@@ -367,7 +413,7 @@
      <x>400</x>
      <y>0</y>
      <width>401</width>
-     <height>511</height>
+     <height>561</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="serialConfigLayout">
@@ -438,7 +484,7 @@
          <x>0</x>
          <y>0</y>
          <width>397</width>
-         <height>453</height>
+         <height>503</height>
         </rect>
        </property>
       </widget>
@@ -450,9 +496,9 @@
    <property name="geometry">
     <rect>
      <x>0</x>
-     <y>510</y>
+     <y>560</y>
      <width>401</width>
-     <height>411</height>
+     <height>361</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="stateConfigLayout">
@@ -523,7 +569,7 @@
          <x>0</x>
          <y>0</y>
          <width>397</width>
-         <height>353</height>
+         <height>303</height>
         </rect>
        </property>
        <property name="sizePolicy">
@@ -541,9 +587,9 @@
    <property name="geometry">
     <rect>
      <x>400</x>
-     <y>510</y>
+     <y>560</y>
      <width>401</width>
-     <height>411</height>
+     <height>361</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="odorantConfigLayout">
@@ -614,7 +660,7 @@
          <x>0</x>
          <y>0</y>
          <width>397</width>
-         <height>353</height>
+         <height>303</height>
         </rect>
        </property>
       </widget>

@@ -25,11 +25,17 @@ void ConnectSerialDeviceDialog::CreateDevice()
 {
 	if (ui.deviceNameLineEdit->text() != "")
 	{
+		std::vector<std::string> exitCommands;
+		for (QString command : ui.exitCommandsTextEdit->toPlainText().split('\n'))
+		{
+			exitCommands.push_back(command.toStdString());
+		}
+
 		std::string deviceName = ui.deviceNameLineEdit->text().toUtf8().constData();
 		std::string portName = ui.portComboBox->currentText().toUtf8().constData();
 		int baudrate = atoi(ui.baudrateComboBox->currentText().toUtf8().constData());
 
-		mm_->ConnectSerialDevice(deviceName, portName, baudrate);
+		mm_->ConnectSerialDevice(deviceName, portName, baudrate, exitCommands);
 
 		deviceList_->addItem(deviceName.c_str());
 

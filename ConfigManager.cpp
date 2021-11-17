@@ -58,7 +58,7 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 			QtSerialConfigBox* s = (QtSerialConfigBox*)cfg->serialScrollChild->children()[i];
 			Ui::QtSerialConfigBox* ui = s->getUi();
 
-			line = ui->plainTextEdit->toPlainText().toUtf8().constData();
+			line = ui->startupCommandsTextEdit->toPlainText().toUtf8().constData();
 			if (line == "EXPERIMENT_SETTINGS")
 			{
 				line = ui->deviceNameLineEdit->text().toUtf8().constData();
@@ -83,6 +83,12 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 		line += '\n';
 		file << line;
 		line = std::to_string(cfg->volumeRangeMaxDoubleSpinBox->value());
+		line += '\n';
+		file << line;
+		line = std::to_string(cfg->laserModeComboBox->currentIndex());
+		line += '\n';
+		file << line;
+		line = std::to_string(cfg->resonantScannerRangeDoubleSpinBox->value());
 		line += "\n\n";
 		file << line;
 
@@ -138,10 +144,16 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 				line = ui->baudrateComboBox->currentText().toUtf8().constData();
 				line += '\n';
 				file << line;
-				line = ui->plainTextEdit->toPlainText().toUtf8().constData();
-				if (line == "EXPERIMENT_SETTINGS")
+				line = ui->startupCommandsTextEdit->toPlainText().toUtf8().constData();
+				if (line != "EXPERIMENT_SETTINGS")
 				{
-					line = std::to_string(cfg->framesPerVolumeSpinBox->value());
+					line += '\n';
+					file << line;
+					file << "EXIT_COMMANDS\n";
+				}
+				else
+				{
+					/*line = std::to_string(cfg->framesPerVolumeSpinBox->value());
 					line = SLICES_PER_VOLUME + line + '\n';
 					file << line;
 					line = std::to_string(cfg->volumesPerSecondSpinBox->value());
@@ -153,7 +165,7 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 					line = std::to_string(cfg->volumeRangeMaxDoubleSpinBox->value());
 					line = VOLUME_SCALE_MAX + line + '\n';
 					file << line;
-					
+
 					if (cfg->odorantScrollChild->children().size() > 1)
 					{
 						line = ODORANT_ORDER;
@@ -185,16 +197,15 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 							line += '\n';
 							file << line;
 						}
-					}
+					}*/
 
-					file << '\n';
+					file << "EXIT_COMMANDS\n";
 				}
-				else
-				{
-					line += '\n';
-					file << line;
-					file << '\n';
-				}
+
+				line = ui->exitCommandsTextEdit->toPlainText().toUtf8().constData();
+				line += '\n';
+				file << line;
+				file << "END_SERIAL_DEVICE\n\n";
 			}
 		}
 
@@ -218,12 +229,10 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 	double floatValue = 0;
 	std::string stringValue;
 	
-
 	std::string serialDeviceName;
 	std::string serialDevicePort;
 	int baudrate = 0;
 	std::string serialCommand;
-	unsigned long long writeSize = 0;
 
 	if (file.is_open())
 	{
@@ -294,6 +303,10 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 				volumeScaleMin = atof(line.c_str());
 				getline(file, line);
 				volumeScaleMax = atof(line.c_str());
+				getline(file, line);
+				laserMode = atoi(line.c_str());
+				getline(file, line);
+				scannerAmplitude = atof(line.c_str());
 			}
 
 			if (line == "ODORANT_SETTINGS")
@@ -335,27 +348,39 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 			//Serial config
 			if (line == "SERIAL_DEVICE")
 			{
+				std::vector<std::string> startCommands;
+				std::vector<std::string> exitCommands;
 				getline(file, line);
 				serialDeviceName = line;
 				getline(file, line);
 				serialDevicePort = line;
 				getline(file, line);
 				baudrate = atoi(line.c_str());
-				mm->ConnectSerialDevice(serialDeviceName, serialDevicePort, baudrate);
-
-				ui->consoleDeviceList->addItem(serialDeviceName.c_str());
 
 				while (getline(file, line))
 				{
-					if (line == "")
+					if (line == "EXIT_COMMANDS")
 					{
 						break;
 					}
 
-					serialCommand = line;
-					serialCommand += '\r';
-					writeSize = serialCommand.size();
-					mm->SerialWrite(serialDeviceName, serialCommand.c_str(), writeSize);
+					startCommands.push_back(line + '\r');
+				}
+				while (getline(file, line))
+				{
+					if (line == "END_SERIAL_DEVICE")
+					{
+						break;
+					}
+
+					exitCommands.push_back(line + '\r');
+				}
+				mm->ConnectSerialDevice(serialDeviceName, serialDevicePort, baudrate, exitCommands);
+				ui->consoleDeviceList->addItem(serialDeviceName.c_str());
+				
+				for (std::string command : startCommands)
+				{
+					mm->SerialWrite(serialDeviceName, command.c_str(), command.size());
 				}
 			}
 		}
@@ -364,7 +389,7 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 	}
 }
 
-void ConfigManager::GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, std::string* exp)
+void ConfigManager::GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, int* lm, double* sa, std::string* exp)
 {
 	if (volumeScaleMin != -1)
 	{
@@ -381,6 +406,14 @@ void ConfigManager::GetExperimentSettings(double* vsMin, double* vsMax, int* fpv
 	if (volumesPerSecond != -1)
 	{
 		*vps = volumesPerSecond;
+	}
+	if (laserMode != -1)
+	{
+		*lm = laserMode;
+	}
+	if (scannerAmplitude != -1)
+	{
+		*sa = scannerAmplitude;
 	}
 	if (experimentDevice != "")
 	{

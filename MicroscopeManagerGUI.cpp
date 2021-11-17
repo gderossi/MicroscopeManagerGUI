@@ -7,7 +7,6 @@
 #include "ConnectSerialDeviceDialog.h"
 #include "OdorantConfigBox.h"
 #include "StateConfigBox.h"
-#include <QtWidgets>
 #include <algorithm>
 #include <random>
 
@@ -15,6 +14,8 @@
 #define DEFAULT_VOLUMES_PER_SECOND 20
 #define VOLUME_SCALE_SLIDER_MULTIPLIER 1000
 #define START_EXPERIMENT_DEVICE '0'
+#define LOCATE_EXPERIMENT_DEVICE '?'
+#define ABORT_EXPERIMENT '!'
 
 MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     QMainWindow(parent),
@@ -29,7 +30,8 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     volumeScaleMin(0),
     volumeScaleMax(1),
     framesPerVolume(DEFAULT_FRAMES_PER_VOLUME),
-    volumesPerSecond(DEFAULT_VOLUMES_PER_SECOND)
+    volumesPerSecond(DEFAULT_VOLUMES_PER_SECOND),
+    scannerAmplitude(1)
 {
     ui.setupUi(this);
 
@@ -59,6 +61,8 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     ui.volumeMax->setMinimum(volumeScaleMin);
     ui.framesPerVolumeSpinBox->setValue(framesPerVolume);
     ui.volumesPerSecondSpinBox->setValue(volumesPerSecond);
+    ui.laserModeComboBox->setCurrentIndex(laserMode);
+    ui.scannerAmplitudeDoubleSpinBox->setValue(scannerAmplitude);
     ui.frameSelectSlider->setMaximum(framesPerVolume-1);
 
     targetFrameInfo = new int[2];
@@ -72,6 +76,7 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     //Serial menu
     connect(ui.actionConnect, &QAction::triggered, this, &MicroscopeManagerGUI::connectSerialDevice);
     connect(ui.actionDisconnect, &QAction::triggered, this, &MicroscopeManagerGUI::disconnectSerialDevice);
+    connect(ui.serialScrollArea->verticalScrollBar(), SIGNAL(rangeChanged(int, int)), this, SLOT(moveScrollBarToBottom(int, int)));
 
     //Serial console
     connect(ui.consoleEnter, &QPushButton::clicked, this, &MicroscopeManagerGUI::writeToSerialDevice);
@@ -92,10 +97,14 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     connect(ui.volumeMax, &QDoubleSpinBox::valueChanged, this, &MicroscopeManagerGUI::setVolumeScaleSliderMax);
     connect(ui.framesPerVolumeSpinBox, &QSpinBox::valueChanged, this, &MicroscopeManagerGUI::setFramesPerVolume);
     connect(ui.volumesPerSecondSpinBox, &QSpinBox::valueChanged, this, &MicroscopeManagerGUI::setVolumesPerSecond);
+    connect(ui.laserModeComboBox, &QComboBox::currentIndexChanged, this, &MicroscopeManagerGUI::setLaserMode);
+    connect(ui.scannerAmplitudeDoubleSpinBox, & QDoubleSpinBox::valueChanged, this, &MicroscopeManagerGUI::setScannerAmplitude);
 
     connect(ui.addOdorantButton, &QToolButton::clicked, this, &MicroscopeManagerGUI::addOdorant);
     connect(ui.shuffleOdorantsButton, &QToolButton::clicked, this, &MicroscopeManagerGUI::shuffleOdorants);
     connect(ui.addStateButton, &QToolButton::clicked, this, &MicroscopeManagerGUI::addState);
+
+    //connect(ui.imageDisplay, &QLabel::)
 }
 
 MicroscopeManagerGUI::~MicroscopeManagerGUI()
@@ -130,7 +139,7 @@ void MicroscopeManagerGUI::readConfig()
     else
     {
         cfg.ReadConfigFile(configFile, mm, &ui);
-        cfg.GetExperimentSettings(&volumeScaleMin, &volumeScaleMax, &framesPerVolume, &volumesPerSecond, &experimentSettingsDevice);
+        cfg.GetExperimentSettings(&volumeScaleMin, &volumeScaleMax, &framesPerVolume, &volumesPerSecond, &laserMode, &scannerAmplitude, &experimentSettingsDevice);
     }
 }
 
@@ -139,6 +148,10 @@ void MicroscopeManagerGUI::snapImage()
     if (filepath == "")
     {
         setFilename();
+        if (filepath == "")
+        {
+            return;
+        }
     }
 
     std::string imageCountFilepath = filepath + "_" + std::to_string(imageCount);
@@ -173,6 +186,10 @@ void MicroscopeManagerGUI::acquireStart()
     if (filepath == "")
     {
         setFilename();
+        if (filepath == "")
+        {
+            return;
+        }
     }
 
     ui.acquireButton->setText("Stop Acquisition");
@@ -184,7 +201,7 @@ void MicroscopeManagerGUI::acquireStart()
     mm->CreateFile();
 
     mm->StartAcquisition(GENTL_INFINITE);
-    cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+    cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
     acquiring = true;
 }
 
@@ -228,7 +245,7 @@ void MicroscopeManagerGUI::liveStart()
     ui.setupExperimentButton->setEnabled(false);
 
     mm->StartAcquisition(GENTL_INFINITE);
-    cameraThd = new DisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+    cameraThd = new DisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
     acquiring = true;
 }
 
@@ -299,6 +316,8 @@ void MicroscopeManagerGUI::writeToSerialDevice()
             output = ">> Set " + deviceName + " to experiment device\n";
             output = ui.consoleOutput->text().toUtf8().constData() + output;
             ui.consoleOutput->setText(output.c_str());
+            ui.consoleOutput->adjustSize();
+            ui.serialScrollAreaContents->setFixedHeight(ui.consoleOutput->height());
         }
         else
         {
@@ -313,6 +332,8 @@ void MicroscopeManagerGUI::writeToSerialDevice()
             output = ">> " + output + '\n';
             output = ui.consoleOutput->text().toUtf8().constData() + output;
             ui.consoleOutput->setText(output.c_str());
+            ui.consoleOutput->adjustSize();
+            ui.serialScrollAreaContents->setFixedHeight(ui.consoleOutput->height());
 
             readFromSerialDevice();
         }
@@ -331,6 +352,15 @@ void MicroscopeManagerGUI::readFromSerialDevice()
     output += '\n';
     output = ui.consoleOutput->text().toUtf8().constData() + output;
     ui.consoleOutput->setText(output.c_str());
+    ui.consoleOutput->adjustSize();
+    ui.serialScrollAreaContents->setFixedHeight(ui.consoleOutput->height());
+}
+
+void MicroscopeManagerGUI::moveScrollBarToBottom(int min, int max)
+{
+    Q_UNUSED(min);
+
+    ui.serialScrollArea->verticalScrollBar()->setValue(max);
 }
 
 void MicroscopeManagerGUI::setVolumeScaleSliderMin()
@@ -383,6 +413,19 @@ void MicroscopeManagerGUI::setVolumesPerSecond()
     writeExperimentParameter(VOLUMES_PER_SECOND, data);
 }
 
+void MicroscopeManagerGUI::setLaserMode()
+{
+    laserMode = ui.laserModeComboBox->currentIndex();
+}
+
+void MicroscopeManagerGUI::setScannerAmplitude()
+{
+    scannerAmplitude = ui.scannerAmplitudeDoubleSpinBox->value();
+
+    std::string data = std::to_string(scannerAmplitude);
+    writeExperimentParameter(SCANNER_AMPLITUDE, data);
+}
+
 void MicroscopeManagerGUI::setTargetFrame()
 {
     targetFrameInfo[1] = ui.frameSelectSlider->value();
@@ -390,33 +433,132 @@ void MicroscopeManagerGUI::setTargetFrame()
 
 void MicroscopeManagerGUI::experimentSetup()
 {
-    if (!acquiring)
+    if (!acquiring && !experimentActive)
     {
-        if (experimentSettingsDevice != "")
+        std::string command;
+
+        if (experimentSettingsDevice == "")
         {
-            std::string startCommand = "" + START_EXPERIMENT_DEVICE + '\r';
-            mm->SerialWrite(experimentSettingsDevice, startCommand.c_str(), startCommand.size());
+            command = "";
+            command += LOCATE_EXPERIMENT_DEVICE;
+            command += '\r';
+            for (std::string device : mm->GetConnectedSerialDevices())
+            {
+                mm->SerialWrite(device, command.c_str(), command.size());
+                if (mm->SerialRead(device, 128) == "EXPERIMENT_DEVICE\r\n")
+                {
+                    experimentSettingsDevice = device;
+                    break;
+                }
+            }
+            if (experimentSettingsDevice == "")
+            {
+                //No experiment device found, info popup and return
+                QMessageBox::information(this, "", "Could not locate control device, experiment setup aborted");
+                return;
+            }
         }
 
         if (filepath == "")
         {
             setFilename();
+            if (filepath == "")
+            {
+                //No filename, info popup and return
+                QMessageBox::information(this, "", "No output file selected, experiment setup aborted");
+                return;
+            }
         }
 
+        //Send experiment settings
+        command = "";
+        command += SLICES_PER_VOLUME + std::to_string(framesPerVolume) + '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        command = "";
+        command += VOLUMES_PER_SECOND + std::to_string(volumesPerSecond) + '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        command = "";
+        command += VOLUME_SCALE_MIN + std::to_string(volumeScaleMin) + '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        command = "";
+        command += VOLUME_SCALE_MAX + std::to_string(volumeScaleMax) + '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        command = "";
+        command += LASER_MODE + std::to_string(laserMode) + '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        command = "";
+        command += SCANNER_AMPLITUDE + std::to_string(scannerAmplitude) + '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        command = "";
+        command += ODORANT_ORDER;
+        QObjectList odorantList = ui.odorantOrderScrollAreaContents->children();
+        for (int i = 1; i < odorantList.size(); i++)
+        {
+            OdorantConfigBox* o = (OdorantConfigBox*)odorantList[i];
+            command += std::to_string(o->getUi()->odorantComboBox->currentData().toInt());
+            o->getUi()->odorantComboBox->setEnabled(false);
+            o->getUi()->deleteOdorant->setEnabled(false);
+        }
+        command += '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        command = "";
+        command += STATE_ORDER;
+        QObjectList stateList = ui.stateOrderScrollAreaContents->children();
+        command += std::to_string(stateList.size() - 1) + ' ';
+        for (int i = 1; i < stateList.size(); i++)
+        {
+            StateConfigBox* s = (StateConfigBox*)stateList[i];
+            command += std::to_string(s->getUi()->stateComboBox->currentData().toInt() + s->getUi()->durationSpinBox->value()) + ' ';
+            s->getUi()->stateComboBox->setEnabled(false);
+            s->getUi()->durationSpinBox->setEnabled(false);
+            s->getUi()->deleteState->setEnabled(false);
+        }
+        command += '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        //Create output file and start live camera view
         mm->SetFilename(filepath);
         mm->CreateFile();
         mm->StartAcquisition(GENTL_INFINITE);
-        cameraThd = new DisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+        cameraThd = new DisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
+
+        //Start microcontroller with given settings
+        command = "";
+        command += START_EXPERIMENT_DEVICE;
+        command += '\r';
+        mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
+        readFromSerialDevice();
+
+        //Disable changing odorants and states
+        ui.shuffleOdorantsButton->setEnabled(false);
+        ui.addOdorantButton->setEnabled(false);
+        ui.addStateButton->setEnabled(false);
+        ui.laserModeComboBox->setEnabled(false);
 
         ui.cameraButtonsFrame->setVisible(false);
         ui.experimentButtonsFrame->setVisible(true);
-        acquiring = true;
+        experimentActive = true;
     }
 }
 
 void MicroscopeManagerGUI::startExperiment()
 {
-    if (!experimentActive)
+    if (experimentActive && !acquiring)
     {
         if (cameraThd)
         {
@@ -425,13 +567,19 @@ void MicroscopeManagerGUI::startExperiment()
             delete cameraThd;
         }
 
-        cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, ui.imageDisplay, targetFrameInfo);
+        cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
 
         if (experimentSettingsDevice != "")
         {
-            std::string startCommand = "" + START_EXPERIMENT_DEVICE + '\r';
+            std::string startCommand = "";
+            startCommand += START_EXPERIMENT_DEVICE;
+            startCommand += '\r';
             mm->SerialWrite(experimentSettingsDevice, startCommand.c_str(), startCommand.size());
+            readFromSerialDevice();
         }
+
+        acquiring = true;
+        ui.startExperimentButton->setEnabled(false);
     }
 }
 
@@ -439,6 +587,15 @@ void MicroscopeManagerGUI::stopExperiment()
 {
     acquiring = false;
     experimentActive = false;
+
+    if (experimentSettingsDevice != "")
+    {
+        std::string stopCommand = "";
+        stopCommand += ABORT_EXPERIMENT;
+        stopCommand += '\r';
+        mm->SerialWrite(experimentSettingsDevice, stopCommand.c_str(), stopCommand.size());
+        readFromSerialDevice();
+    }
 
     if (cameraThd)
     {
@@ -451,6 +608,31 @@ void MicroscopeManagerGUI::stopExperiment()
     mm->StopAcquisition();
     mm->CloseFile();
 
+    //Enable changing odorants and states
+    ui.shuffleOdorantsButton->setEnabled(true);
+    ui.addOdorantButton->setEnabled(true);
+    ui.addStateButton->setEnabled(true);
+    ui.laserModeComboBox->setEnabled(true);
+
+    QObjectList odorantList = ui.odorantOrderScrollAreaContents->children();
+    for (int i = 1; i < odorantList.size(); i++)
+    {
+        OdorantConfigBox* o = (OdorantConfigBox*)odorantList[i];
+        o->getUi()->odorantComboBox->setEnabled(true);
+        o->getUi()->deleteOdorant->setEnabled(true);
+    }
+
+
+    QObjectList stateList = ui.stateOrderScrollAreaContents->children();
+    for (int i = 1; i < stateList.size(); i++)
+    {
+        StateConfigBox* s = (StateConfigBox*)stateList[i];
+        s->getUi()->stateComboBox->setEnabled(true);
+        s->getUi()->durationSpinBox->setEnabled(true);
+        s->getUi()->deleteState->setEnabled(true);
+    }
+
+    ui.startExperimentButton->setEnabled(true);
     ui.experimentButtonsFrame->setVisible(false);
     ui.cameraButtonsFrame->setVisible(true);
 }
@@ -490,13 +672,29 @@ void MicroscopeManagerGUI::addState()
     ui.stateOrderScrollAreaContents->layout()->addWidget(s);
 }
 
+void MicroscopeManagerGUI::updateDisplayFrame(const QPixmap & pixmap, bool acq)
+{
+   
+    ui.imageDisplay->setPixmap(pixmap);
+    /*if (acq)
+    {
+        ((AcquisitionDisplayThread*)cameraThd)->processPixmap();
+    }
+    else
+    {
+        return;
+    }*/
+}
+
 
 void MicroscopeManagerGUI::writeExperimentParameter(char parameter, std::string data)
 {
-    data = parameter + data + '\r';
-    unsigned long long writeSize = data.size();
-
-    mm->SerialWrite(experimentSettingsDevice, data.c_str(), writeSize);
+    if (experimentActive)
+    {
+        data = parameter + data + '\r';
+        unsigned long long writeSize = data.size();
+        mm->SerialWrite(experimentSettingsDevice, data.c_str(), writeSize);
+    }
 }
 
 void MicroscopeManagerGUI::startupMenu()
@@ -516,6 +714,6 @@ void MicroscopeManagerGUI::startupMenu()
 void MicroscopeManagerGUI::defaultStartup()
 {
     mm->CreateImageManager("Raw", NULL);
-    mm->CreateCameraManager("FLIR", NULL);
+    mm->CreateCameraManager("Test", NULL);
     mm->CreateSerialManager("Windows", NULL);
 }

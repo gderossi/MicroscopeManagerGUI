@@ -14,6 +14,9 @@ public:
     MicroscopeManagerGUI(QWidget *parent = Q_NULLPTR);
     ~MicroscopeManagerGUI();
 
+public slots:
+    void updateDisplayFrame(const QPixmap & pixmap, bool acq);
+
 private slots:
     void writeConfig();
     void readConfig();
@@ -35,6 +38,7 @@ private slots:
     void disconnectSerialDevice();
     void writeToSerialDevice();
     void readFromSerialDevice();
+    void moveScrollBarToBottom(int min, int max);
 
     void setVolumeScaleSliderMin();
     void setVolumeScaleSliderMax();
@@ -42,6 +46,8 @@ private slots:
     void setVolumeScaleMax();
     void setFramesPerVolume();
     void setVolumesPerSecond();
+    void setLaserMode();
+    void setScannerAmplitude();
 
     void addOdorant();
     void shuffleOdorants();
@@ -72,6 +78,8 @@ private:
     double volumeScaleMax;
     int framesPerVolume;
     int volumesPerSecond;
+    int laserMode;
+    double scannerAmplitude;
     int* targetFrameInfo;
     std::string experimentSettingsDevice;
 };

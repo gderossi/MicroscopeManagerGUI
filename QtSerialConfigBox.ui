@@ -124,12 +124,22 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QPlainTextEdit" name="plainTextEdit"/>
+       <widget class="QPlainTextEdit" name="startupCommandsTextEdit"/>
       </item>
       <item row="3" column="0">
-       <widget class="QLabel" name="label">
+       <widget class="QLabel" name="startupCommandsLabel">
         <property name="text">
-         <string>Commands</string>
+         <string>Startup Commands</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QPlainTextEdit" name="exitCommandsTextEdit"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="exitCommandsLabel">
+        <property name="text">
+         <string>Exit Commands</string>
         </property>
        </widget>
       </item>

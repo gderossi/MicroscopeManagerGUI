@@ -70,11 +70,11 @@
     <ClCompile Include="DisplayThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PixmapReadyObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AcquisitionDisplayThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SerialConsoleThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -82,6 +82,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DisplayThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AcquisitionDisplayThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -119,6 +122,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="RangeSlider.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="PixmapReadyObject.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

@@ -100,6 +100,7 @@
     <ClCompile Include="ConnectSerialDeviceDialog.cpp" />
     <ClCompile Include="DisplayThread.cpp" />
     <ClCompile Include="OdorantConfigBox.cpp" />
+    <ClCompile Include="PixmapReadyObject.cpp" />
     <ClCompile Include="QtSerialConfigBox.cpp" />
     <ClCompile Include="RangeSlider.cpp" />
     <ClCompile Include="SerialConsoleThread.cpp" />
@@ -126,6 +127,7 @@
     <QtMoc Include="ConnectSerialDeviceDialog.h" />
     <QtMoc Include="RangeSlider.h" />
     <ClInclude Include="DisplayThread.h" />
+    <QtMoc Include="PixmapReadyObject.h" />
     <ClInclude Include="SerialConsoleThread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>300</width>
-    <height>241</height>
+    <width>320</width>
+    <height>311</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,8 +18,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>301</width>
-     <height>241</height>
+     <width>321</width>
+     <height>311</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -151,6 +151,44 @@
        </widget>
       </item>
      </layout>
+    </item>
+    <item>
+     <widget class="QFrame" name="exitCommandsFrame">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>120</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <widget class="QWidget" name="horizontalLayoutWidget">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>311</width>
+         <height>111</height>
+        </rect>
+       </property>
+       <layout class="QHBoxLayout" name="exitCommandsLayout">
+        <item>
+         <widget class="QLabel" name="exitCommandsLabel">
+          <property name="text">
+           <string>Exit Commands</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextEdit" name="exitCommandsTextEdit"/>
+        </item>
+       </layout>
+      </widget>
+     </widget>
     </item>
     <item>
      <widget class="QDialogButtonBox" name="connectSerialConfirm">

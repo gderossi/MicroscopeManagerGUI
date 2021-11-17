@@ -10,6 +10,8 @@
 #define VOLUME_SCALE_MAX '4'
 #define ODORANT_ORDER '5'
 #define STATE_ORDER '6'
+#define LASER_MODE '7'
+#define SCANNER_AMPLITUDE '8'
 
 class ConfigManager
 {
@@ -17,13 +19,15 @@ public:
 	ConfigManager();
 	void WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg);
 	void ReadConfigFile(std::string filename, MicroscopeManager* mm, Ui::MicroscopeManagerGUIClass* ui);
-	void GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, std::string* exp);
+	void GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, int *lm, double* sa, std::string* exp);
 
 private:
 	double volumeScaleMin;
 	double volumeScaleMax;
 	int framesPerVolume;
 	int volumesPerSecond;
+	int laserMode;
+	double scannerAmplitude;
 	std::string experimentDevice;
 };
 
