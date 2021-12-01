@@ -1,10 +1,9 @@
 #include "ConnectSerialDeviceDialog.h"
 
 
-ConnectSerialDeviceDialog::ConnectSerialDeviceDialog(std::vector<std::string> ports, MicroscopeManager* mm, QComboBox* deviceList, QWidget *parent)
+ConnectSerialDeviceDialog::ConnectSerialDeviceDialog(std::vector<std::string> ports, QObject* mainWindow, QWidget *parent)
 	: QDialog(parent),
-	mm_(mm),
-	deviceList_(deviceList)
+	mainWindow_(mainWindow)
 {
 	ui.setupUi(this);
 
@@ -15,6 +14,7 @@ ConnectSerialDeviceDialog::ConnectSerialDeviceDialog(std::vector<std::string> po
 
 	connect(ui.connectSerialConfirm->button(QDialogButtonBox::StandardButton::Ok), &QPushButton::clicked, this, &ConnectSerialDeviceDialog::CreateDevice);
 	connect(ui.connectSerialConfirm->button(QDialogButtonBox::StandardButton::Cancel), &QPushButton::clicked, this, &ConnectSerialDeviceDialog::close);
+	connect(this, SIGNAL(serialDeviceReady(std::string, std::string, int, std::vector<std::string>)), mainWindow_, SLOT(connectSerialDevice(std::string, std::string, int, std::vector<std::string>)));
 }
 
 ConnectSerialDeviceDialog::~ConnectSerialDeviceDialog()
@@ -35,11 +35,7 @@ void ConnectSerialDeviceDialog::CreateDevice()
 		std::string portName = ui.portComboBox->currentText().toUtf8().constData();
 		int baudrate = atoi(ui.baudrateComboBox->currentText().toUtf8().constData());
 
-		mm_->ConnectSerialDevice(deviceName, portName, baudrate, exitCommands);
-
-		deviceList_->addItem(deviceName.c_str());
-
-		//serialThds.emplace(deviceName, new SerialConsoleThread(deviceName, mm, ui.consoleOutput));
+		emit serialDeviceReady(deviceName, portName, baudrate, exitCommands);
 
 		close();
 	}

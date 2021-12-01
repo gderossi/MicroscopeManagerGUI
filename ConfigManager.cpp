@@ -213,8 +213,10 @@ void ConfigManager::WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg)
 	}
 }
 
-void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, Ui::MicroscopeManagerGUIClass* ui)
+void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, Ui::MicroscopeManagerGUIClass* ui, QObject* mainWindow)
 {
+	QObject::connect(this, SIGNAL(serialDeviceReady(std::string, std::string, int, std::vector<std::string>, std::vector<std::string>)), mainWindow, SLOT(connectSerialDevice(std::string, std::string, int, std::vector<std::string>, std::vector<std::string>)));
+
 	std::string line;
 	std::ifstream file(filename);
 
@@ -375,13 +377,8 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 
 					exitCommands.push_back(line + '\r');
 				}
-				mm->ConnectSerialDevice(serialDeviceName, serialDevicePort, baudrate, exitCommands);
-				ui->consoleDeviceList->addItem(serialDeviceName.c_str());
-				
-				for (std::string command : startCommands)
-				{
-					mm->SerialWrite(serialDeviceName, command.c_str(), command.size());
-				}
+
+				emit serialDeviceReady(serialDeviceName, serialDevicePort, baudrate, exitCommands, startCommands);
 			}
 		}
 

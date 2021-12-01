@@ -60,12 +60,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Program Files\Euresys\eGrabber\include;C:\Users\ramanlab\source\repos\MicroscopeManager\MicroscopeManager;C:\src\ImarisWriter\interface;.\;C:\Program Files\FLIR Systems\Spinnaker\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\Euresys\eGrabber\include;C:\Users\ramanlab\source\repos\MicroscopeManager\MicroscopeManager;C:\src\ImarisWriter\interface;.\;C:\Program Files\FLIR Systems\Spinnaker\include;C:\src\serial\serial\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>C:\src\ImarisWriter\release\Debug;C:\Users\ramanlab\source\repos\MicroscopeManager\x64\Debug;C:\Program Files\FLIR Systems\Spinnaker\lib64\vs2015;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>MicroscopeManager.lib;bpImarisWriter96.lib;ImarisWriter_static.lib;Spinnaker_v140.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\src\ImarisWriter\release\Debug;C:\Users\ramanlab\source\repos\MicroscopeManager\x64\Debug;C:\Program Files\FLIR Systems\Spinnaker\lib64\vs2015;C:\src\serial\serial\visual_studio\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>MicroscopeManager.lib;bpImarisWriter96.lib;ImarisWriter_static.lib;Spinnaker_v140.lib;serial.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
@@ -104,6 +104,8 @@
     <ClCompile Include="QtSerialConfigBox.cpp" />
     <ClCompile Include="RangeSlider.cpp" />
     <ClCompile Include="SerialConsoleThread.cpp" />
+    <ClCompile Include="SerialDeviceThread.cpp" />
+    <ClCompile Include="SerialQueueObject.cpp" />
     <ClCompile Include="StateConfigBox.cpp" />
     <QtRcc Include="MicroscopeManagerGUI.qrc" />
     <QtUic Include="ConfigDialog.ui" />
@@ -119,9 +121,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcquisitionDisplayThread.h" />
+    <ClInclude Include="SerialDeviceThread.h" />
+    <QtMoc Include="SerialQueueObject.h" />
     <QtMoc Include="StateConfigBox.h" />
     <QtMoc Include="ConfigDialog.h" />
-    <ClInclude Include="ConfigManager.h" />
+    <QtMoc Include="ConfigManager.h" />
     <QtMoc Include="QtSerialConfigBox.h" />
     <QtMoc Include="OdorantConfigBox.h" />
     <QtMoc Include="ConnectSerialDeviceDialog.h" />

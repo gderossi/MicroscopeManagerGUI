@@ -1,7 +1,7 @@
 #include "MicroscopeManagerGUI.h"
 #include "AcquisitionDisplayThread.h"
 #include "DisplayThread.h"
-#include "SerialConsoleThread.h"
+#include "SerialDeviceThread.h"
 #include "ConfigManager.h"
 #include "ConfigDialog.h"
 #include "ConnectSerialDeviceDialog.h"
@@ -20,6 +20,7 @@
 MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     QMainWindow(parent),
     mm(new MicroscopeManager("D:/test")),
+    serialQueue(new SerialQueueObject()),
     buf(NULL),
     cameraThd(NULL),
     acquiring(false),
@@ -74,7 +75,7 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     connect(ui.actionNew_Config, &QAction::triggered, this, &MicroscopeManagerGUI::writeConfig);
 
     //Serial menu
-    connect(ui.actionConnect, &QAction::triggered, this, &MicroscopeManagerGUI::connectSerialDevice);
+    connect(ui.actionConnect, &QAction::triggered, this, &MicroscopeManagerGUI::openConnectSerialDialog);
     connect(ui.actionDisconnect, &QAction::triggered, this, &MicroscopeManagerGUI::disconnectSerialDevice);
     connect(ui.serialScrollArea->verticalScrollBar(), SIGNAL(rangeChanged(int, int)), this, SLOT(moveScrollBarToBottom(int, int)));
 
@@ -116,8 +117,20 @@ MicroscopeManagerGUI::~MicroscopeManagerGUI()
         delete cameraThd;
     }
 
+    //Delete all serial threads
+    std::map<std::string, MMThread*>::iterator i;
+
+    for (i = serialThds.begin(); i != serialThds.end(); i++)
+    {
+        MMThread* thd = i->second;
+        thd->StopThread();
+        thd->WaitForThread();
+        delete thd;
+    }
+
     delete buf;
     delete mm;
+    delete serialQueue;
     delete volumeScale;
     delete targetFrameInfo;
 }
@@ -138,7 +151,7 @@ void MicroscopeManagerGUI::readConfig()
     }
     else
     {
-        cfg.ReadConfigFile(configFile, mm, &ui);
+        cfg.ReadConfigFile(configFile, mm, &ui, this);
         cfg.GetExperimentSettings(&volumeScaleMin, &volumeScaleMax, &framesPerVolume, &volumesPerSecond, &laserMode, &scannerAmplitude, &experimentSettingsDevice);
     }
 }
@@ -279,10 +292,29 @@ void MicroscopeManagerGUI::setFilename()
     imageCount = 0;
 }
 
-void MicroscopeManagerGUI::connectSerialDevice()
+void MicroscopeManagerGUI::openConnectSerialDialog()
 {
-    ConnectSerialDeviceDialog serialDialog(mm->GetSerialPorts(), mm, ui.consoleDeviceList);
+    ConnectSerialDeviceDialog serialDialog(mm->GetSerialPorts(), this);
     serialDialog.exec();
+}
+
+void MicroscopeManagerGUI::connectSerialDevice(std::string deviceName, std::string port, int baudrate, std::vector<std::string> exitCommands)
+{
+    mm->ConnectSerialDevice(deviceName, port, baudrate, exitCommands);
+    ui.consoleDeviceList->addItem(deviceName.c_str());
+    serialThds.emplace(deviceName, new SerialDeviceThread(mm->GetSerialDevice(deviceName), serialQueue, this));
+}
+
+void MicroscopeManagerGUI::connectSerialDevice(std::string deviceName, std::string port, int baudrate, std::vector<std::string> exitCommands, std::vector<std::string> startCommands)
+{
+    mm->ConnectSerialDevice(deviceName, port, baudrate, exitCommands);
+    ui.consoleDeviceList->addItem(deviceName.c_str());
+    serialThds.emplace(deviceName, new SerialDeviceThread(mm->GetSerialDevice(deviceName), serialQueue, this));
+
+    for (std::string command : startCommands)
+    {
+        mm->SerialWrite(deviceName, command.c_str(), command.size());
+    }
 }
 
 void MicroscopeManagerGUI::disconnectSerialDevice()
@@ -292,6 +324,12 @@ void MicroscopeManagerGUI::disconnectSerialDevice()
 
     deviceName = ui.consoleDeviceList->currentText().toUtf8().constData();
     i = ui.consoleDeviceList->currentIndex();
+
+    MMThread* serialThread = serialThds.find(deviceName)->second;
+    serialThds.erase(deviceName);
+    serialThread->StopThread();
+    serialThread->WaitForThread();
+    delete serialThread;
 
     mm->DisconnectSerialDevice(deviceName);
 
@@ -334,21 +372,14 @@ void MicroscopeManagerGUI::writeToSerialDevice()
             ui.consoleOutput->setText(output.c_str());
             ui.consoleOutput->adjustSize();
             ui.serialScrollAreaContents->setFixedHeight(ui.consoleOutput->height());
-
-            readFromSerialDevice();
         }
     }
 }
 
-void MicroscopeManagerGUI::readFromSerialDevice()
+void MicroscopeManagerGUI::readFromSerialDevice(std::string message)
 {
-    std::string deviceName;
     std::string output;
-    unsigned long long readSize = 128;
-
-    deviceName = ui.consoleDeviceList->currentText().toUtf8().constData();
-
-    output = mm->SerialRead(deviceName, readSize);
+    output = message;
     output += '\n';
     output = ui.consoleOutput->text().toUtf8().constData() + output;
     ui.consoleOutput->setText(output.c_str());
@@ -442,7 +473,7 @@ void MicroscopeManagerGUI::experimentSetup()
             command = "";
             command += LOCATE_EXPERIMENT_DEVICE;
             command += '\r';
-            for (std::string device : mm->GetConnectedSerialDevices())
+            for (std::string device : mm->ListConnectedSerialDevices())
             {
                 mm->SerialWrite(device, command.c_str(), command.size());
                 if (mm->SerialRead(device, 128) == "EXPERIMENT_DEVICE\r\n")
@@ -474,32 +505,26 @@ void MicroscopeManagerGUI::experimentSetup()
         command = "";
         command += SLICES_PER_VOLUME + std::to_string(framesPerVolume) + '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         command = "";
         command += VOLUMES_PER_SECOND + std::to_string(volumesPerSecond) + '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         command = "";
         command += VOLUME_SCALE_MIN + std::to_string(volumeScaleMin) + '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         command = "";
         command += VOLUME_SCALE_MAX + std::to_string(volumeScaleMax) + '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         command = "";
         command += LASER_MODE + std::to_string(laserMode) + '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         command = "";
         command += SCANNER_AMPLITUDE + std::to_string(scannerAmplitude) + '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         command = "";
         command += ODORANT_ORDER;
@@ -513,7 +538,6 @@ void MicroscopeManagerGUI::experimentSetup()
         }
         command += '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         command = "";
         command += STATE_ORDER;
@@ -529,7 +553,6 @@ void MicroscopeManagerGUI::experimentSetup()
         }
         command += '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         //Create output file and start live camera view
         mm->SetFilename(filepath);
@@ -542,7 +565,6 @@ void MicroscopeManagerGUI::experimentSetup()
         command += START_EXPERIMENT_DEVICE;
         command += '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
-        readFromSerialDevice();
 
         //Disable changing odorants and states
         ui.shuffleOdorantsButton->setEnabled(false);
@@ -575,7 +597,6 @@ void MicroscopeManagerGUI::startExperiment()
             startCommand += START_EXPERIMENT_DEVICE;
             startCommand += '\r';
             mm->SerialWrite(experimentSettingsDevice, startCommand.c_str(), startCommand.size());
-            readFromSerialDevice();
         }
 
         acquiring = true;
@@ -594,7 +615,6 @@ void MicroscopeManagerGUI::stopExperiment()
         stopCommand += ABORT_EXPERIMENT;
         stopCommand += '\r';
         mm->SerialWrite(experimentSettingsDevice, stopCommand.c_str(), stopCommand.size());
-        readFromSerialDevice();
     }
 
     if (cameraThd)

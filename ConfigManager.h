@@ -13,13 +13,18 @@
 #define LASER_MODE '7'
 #define SCANNER_AMPLITUDE '8'
 
-class ConfigManager
+class ConfigManager : public QObject
 {
+	Q_OBJECT
+
 public:
 	ConfigManager();
 	void WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg);
-	void ReadConfigFile(std::string filename, MicroscopeManager* mm, Ui::MicroscopeManagerGUIClass* ui);
+	void ReadConfigFile(std::string filename, MicroscopeManager* mm, Ui::MicroscopeManagerGUIClass* ui, QObject* mainWindow);
 	void GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, int *lm, double* sa, std::string* exp);
+
+signals:
+	void serialDeviceReady(std::string, std::string, int, std::vector<std::string>, std::vector<std::string> startCommands);
 
 private:
 	double volumeScaleMin;

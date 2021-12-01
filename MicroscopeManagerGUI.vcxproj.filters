@@ -73,18 +73,24 @@
     <ClCompile Include="PixmapReadyObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SerialDeviceThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SerialQueueObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SerialConsoleThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ConfigManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DisplayThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AcquisitionDisplayThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SerialDeviceThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -125,6 +131,12 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="PixmapReadyObject.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="SerialQueueObject.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="ConfigManager.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

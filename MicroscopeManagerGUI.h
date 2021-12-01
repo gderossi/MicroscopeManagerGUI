@@ -5,6 +5,7 @@
 #include "MicroscopeManager.h"
 #include "AcquisitionDisplayThread.h"
 #include <RangeSlider.h>
+#include "SerialQueueObject.h"
 
 class MicroscopeManagerGUI : public QMainWindow
 {
@@ -16,6 +17,9 @@ public:
 
 public slots:
     void updateDisplayFrame(const QPixmap & pixmap, bool acq);
+    void connectSerialDevice(std::string deviceName, std::string port, int baudrate, std::vector<std::string> exitCommands);
+    void connectSerialDevice(std::string deviceName, std::string port, int baudrate, std::vector<std::string> exitCommands, std::vector<std::string> startCommands);
+    void readFromSerialDevice(std::string message);
 
 private slots:
     void writeConfig();
@@ -34,10 +38,9 @@ private slots:
     void setTargetFrame();
 
     void setFilename();
-    void connectSerialDevice();
+    void openConnectSerialDialog();
     void disconnectSerialDevice();
     void writeToSerialDevice();
-    void readFromSerialDevice();
     void moveScrollBarToBottom(int min, int max);
 
     void setVolumeScaleSliderMin();
@@ -72,6 +75,7 @@ private:
     std::string filepath;
     int imageCount;
     std::map<std::string, MMThread*> serialThds;
+    SerialQueueObject* serialQueue;
 
     RangeSlider* volumeScale;
     double volumeScaleMin;

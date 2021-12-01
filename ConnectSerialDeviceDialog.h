@@ -12,12 +12,14 @@ class ConnectSerialDeviceDialog : public QDialog
 	Q_OBJECT
 
 public:
-	ConnectSerialDeviceDialog(std::vector<std::string> ports, MicroscopeManager* mm, QComboBox* deviceList, QWidget *parent = Q_NULLPTR);
+	ConnectSerialDeviceDialog(std::vector<std::string> ports, QObject* mainWindow_, QWidget *parent = Q_NULLPTR);
 	~ConnectSerialDeviceDialog();
 	void CreateDevice();
 
+signals:
+	void serialDeviceReady(std::string, std::string, int, std::vector<std::string>);
+
 private:
 	Ui::ConnectSerialDeviceDialog ui;
-	MicroscopeManager* mm_;
-	QComboBox* deviceList_;
+	QObject* mainWindow_;
 };
