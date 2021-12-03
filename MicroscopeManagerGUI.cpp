@@ -20,7 +20,7 @@
 MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     QMainWindow(parent),
     mm(new MicroscopeManager("D:/test")),
-    serialQueue(new SerialQueueObject()),
+    serialQueue(new SerialQueueObject(this)),
     buf(NULL),
     cameraThd(NULL),
     acquiring(false),
@@ -302,14 +302,14 @@ void MicroscopeManagerGUI::connectSerialDevice(std::string deviceName, std::stri
 {
     mm->ConnectSerialDevice(deviceName, port, baudrate, exitCommands);
     ui.consoleDeviceList->addItem(deviceName.c_str());
-    serialThds.emplace(deviceName, new SerialDeviceThread(mm->GetSerialDevice(deviceName), serialQueue, this));
+    serialThds.emplace(deviceName, new SerialDeviceThread(mm->GetSerialDevice(deviceName), serialQueue));
 }
 
 void MicroscopeManagerGUI::connectSerialDevice(std::string deviceName, std::string port, int baudrate, std::vector<std::string> exitCommands, std::vector<std::string> startCommands)
 {
     mm->ConnectSerialDevice(deviceName, port, baudrate, exitCommands);
     ui.consoleDeviceList->addItem(deviceName.c_str());
-    serialThds.emplace(deviceName, new SerialDeviceThread(mm->GetSerialDevice(deviceName), serialQueue, this));
+    serialThds.emplace(deviceName, new SerialDeviceThread(mm->GetSerialDevice(deviceName), serialQueue));
 
     for (std::string command : startCommands)
     {
@@ -378,6 +378,10 @@ void MicroscopeManagerGUI::writeToSerialDevice()
 
 void MicroscopeManagerGUI::readFromSerialDevice(std::string message)
 {
+    if (message == "")
+    {
+        return;
+    }
     std::string output;
     output = message;
     output += '\n';
@@ -464,6 +468,7 @@ void MicroscopeManagerGUI::setTargetFrame()
 
 void MicroscopeManagerGUI::experimentSetup()
 {
+    
     if (!acquiring && !experimentActive)
     {
         std::string command;
@@ -473,15 +478,19 @@ void MicroscopeManagerGUI::experimentSetup()
             command = "";
             command += LOCATE_EXPERIMENT_DEVICE;
             command += '\r';
+            serialQueue->qMutex.lock();
             for (std::string device : mm->ListConnectedSerialDevices())
             {
+                
                 mm->SerialWrite(device, command.c_str(), command.size());
-                if (mm->SerialRead(device, 128) == "EXPERIMENT_DEVICE\r\n")
+                while (!mm->GetSerialDevice(device)->Available()) {} //Add a timeout to this that returns and says "Could not locate" like below
+                if (mm->SerialRead(device, 128) == "EXPERIMENT_DEVICE")
                 {
                     experimentSettingsDevice = device;
                     break;
                 }
             }
+            serialQueue->qMutex.unlock();
             if (experimentSettingsDevice == "")
             {
                 //No experiment device found, info popup and return
@@ -542,11 +551,20 @@ void MicroscopeManagerGUI::experimentSetup()
         command = "";
         command += STATE_ORDER;
         QObjectList stateList = ui.stateOrderScrollAreaContents->children();
-        command += std::to_string(stateList.size() - 1) + ' ';
+        command += std::to_string(stateList.size() - 1);
+        if (stateList.size() != 1)
+        {
+            command += " ";
+        }
+
         for (int i = 1; i < stateList.size(); i++)
         {
             StateConfigBox* s = (StateConfigBox*)stateList[i];
-            command += std::to_string(s->getUi()->stateComboBox->currentData().toInt() + s->getUi()->durationSpinBox->value()) + ' ';
+            command += std::to_string(s->getUi()->stateComboBox->currentData().toInt() + s->getUi()->durationSpinBox->value());
+            if (i != stateList.size() - 1)
+            {
+                command += " ";
+            }
             s->getUi()->stateComboBox->setEnabled(false);
             s->getUi()->durationSpinBox->setEnabled(false);
             s->getUi()->deleteState->setEnabled(false);
@@ -554,9 +572,7 @@ void MicroscopeManagerGUI::experimentSetup()
         command += '\r';
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
 
-        //Create output file and start live camera view
-        mm->SetFilename(filepath);
-        mm->CreateFile();
+        //Start live camera view
         mm->StartAcquisition(GENTL_INFINITE);
         cameraThd = new DisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
 
@@ -589,6 +605,8 @@ void MicroscopeManagerGUI::startExperiment()
             delete cameraThd;
         }
 
+        mm->SetFilename(filepath);
+        mm->CreateFile();
         cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
 
         if (experimentSettingsDevice != "")
@@ -601,6 +619,14 @@ void MicroscopeManagerGUI::startExperiment()
 
         acquiring = true;
         ui.startExperimentButton->setEnabled(false);
+
+        //Disable changing all other experiment settings
+        ui.framesPerVolumeSpinBox->setEnabled(false);
+        ui.volumesPerSecondSpinBox->setEnabled(false);
+        ui.volumeMax->setEnabled(false);
+        ui.volumeMin->setEnabled(false);
+        volumeScale->setEnabled(false);
+        ui.scannerAmplitudeDoubleSpinBox->setEnabled(false);
     }
 }
 
@@ -633,6 +659,13 @@ void MicroscopeManagerGUI::stopExperiment()
     ui.addOdorantButton->setEnabled(true);
     ui.addStateButton->setEnabled(true);
     ui.laserModeComboBox->setEnabled(true);
+
+    ui.framesPerVolumeSpinBox->setEnabled(true);
+    ui.volumesPerSecondSpinBox->setEnabled(true);
+    ui.volumeMax->setEnabled(true);
+    ui.volumeMin->setEnabled(true);
+    volumeScale->setEnabled(true);
+    ui.scannerAmplitudeDoubleSpinBox->setEnabled(true);
 
     QObjectList odorantList = ui.odorantOrderScrollAreaContents->children();
     for (int i = 1; i < odorantList.size(); i++)

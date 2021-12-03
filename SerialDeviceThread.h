@@ -8,7 +8,7 @@ class SerialDeviceThread :
     public MMThread
 {
 public:
-    SerialDeviceThread(SerialDevice* device, SerialQueueObject* serialQueue, QObject* mainWindow);
+    SerialDeviceThread(SerialDevice* device, SerialQueueObject* serialQueue);
     void WaitForThread();
     
 private:
@@ -16,7 +16,6 @@ private:
 
     SerialDevice* device_;
     SerialQueueObject* serialQueue_;
-    QObject* mainWindow_;
     std::thread thd_;
 };
 

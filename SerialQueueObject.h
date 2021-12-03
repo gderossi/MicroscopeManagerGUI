@@ -9,6 +9,7 @@ class SerialQueueObject :
     Q_OBJECT
 
 public:
+    SerialQueueObject(QObject* mainWindow);
     void sendSignal(std::string);
     std::mutex qMutex;
 
