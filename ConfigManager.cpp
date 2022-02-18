@@ -248,6 +248,7 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 
 				getline(file, line);
 				mm->CreateCameraManager(line, NULL);
+				mm->CreateCameraMask(10);
 
 				getline(file, line);
 				mm->CreateSerialManager(line, NULL);

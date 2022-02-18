@@ -29,6 +29,7 @@ void DisplayThread::Display()
 	while (active)
 	{
 		mm_->GetImage();
+		mm_->ApplyCameraMask();
 
 		if (bufferCount_ % targetFrameInfo_[0] == targetFrameInfo_[1])
 		{

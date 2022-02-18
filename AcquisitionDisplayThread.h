@@ -10,6 +10,7 @@ class AcquisitionDisplayThread :
 {
 public:
 	AcquisitionDisplayThread(unsigned long long bufferCount, MicroscopeManager* mm, QObject* mainWindow, int* targetFrameInfo);
+	AcquisitionDisplayThread(unsigned long long bufferCount, MicroscopeManager* mm, QObject* mainWindow, int* targetFrameInfo, std::vector<std::pair<char, int>> sd, std::vector<char> o, bool expActive, int fpv, int vps, float vsmin, float vsmax, int lm, float lp,  std::string ed);
 	~AcquisitionDisplayThread();
 	void WaitForThread();
 	void processPixmap();
@@ -29,5 +30,26 @@ private:
 	unsigned long long height;
 	std::atomic_bool pixmapProcessed;
 	PixmapReadyObject* pix_;
+	std::atomic_bool masked;
+
+	//Metadata info
+	bool experimentActive;
+	int laserMode;
+	int framesPerVolume;
+	int volumesPerSecond;
+	std::string experimentDescription;
+	float volumeScaleMin;
+	float volumeScaleMax;
+	float laserPower;
+	int cameraMode;
+	std::vector<std::pair<char, int>> stateAndDuration;
+	std::vector<char> odorants;
+
+	int stateIndex;
+	int odorantIndex;
+	char currentOdor;
+	char currentLaser;
+	int remainingLaserImages;
+	int remainingStateImages;
 };
 

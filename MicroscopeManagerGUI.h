@@ -83,7 +83,11 @@ private:
     int framesPerVolume;
     int volumesPerSecond;
     int laserMode;
+    float laserPower;
     double scannerAmplitude;
     int* targetFrameInfo;
     std::string experimentSettingsDevice;
+    std::string experimentDescription;
+    std::vector<std::pair<char, int>> stateAndDuration;
+    std::vector<char> odorants;
 };

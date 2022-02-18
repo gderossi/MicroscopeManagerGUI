@@ -17,6 +17,8 @@
 #define LOCATE_EXPERIMENT_DEVICE '?'
 #define ABORT_EXPERIMENT '!'
 
+#define USE_CAMERA_MASK true
+
 MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     QMainWindow(parent),
     mm(new MicroscopeManager("D:/test")),
@@ -174,6 +176,10 @@ void MicroscopeManagerGUI::snapImage()
     mm->CreateFile();
 
     mm->SnapImage();
+    if (USE_CAMERA_MASK)
+    {
+        mm->ApplyCameraMask();
+    }
     std::memcpy(buf, mm->GetImageBuffer(), mm->GetImageBufferSize());
     img = QImage(buf, width, height, width, QImage::Format_Grayscale8, NULL, NULL);
     ui.imageDisplay->setPixmap(QPixmap::fromImage(img));
@@ -542,6 +548,7 @@ void MicroscopeManagerGUI::experimentSetup()
         {
             OdorantConfigBox* o = (OdorantConfigBox*)odorantList[i];
             command += std::to_string(o->getUi()->odorantComboBox->currentData().toInt());
+            odorants.push_back(o->getUi()->odorantComboBox->currentData().toInt());
             o->getUi()->odorantComboBox->setEnabled(false);
             o->getUi()->deleteOdorant->setEnabled(false);
         }
@@ -561,6 +568,13 @@ void MicroscopeManagerGUI::experimentSetup()
         {
             StateConfigBox* s = (StateConfigBox*)stateList[i];
             command += std::to_string(s->getUi()->stateComboBox->currentData().toInt() + s->getUi()->durationSpinBox->value());
+
+            if (s->getUi()->stateComboBox->currentData().toInt() != 0x00030000) //Check if not reset state -- should get rid of the number here and replace with a define
+            {
+                stateAndDuration.push_back(std::pair<char, int>((char)(s->getUi()->stateComboBox->currentData().toInt() >> 16), s->getUi()->durationSpinBox->value()));
+            }
+
+
             if (i != stateList.size() - 1)
             {
                 command += " ";
@@ -607,7 +621,7 @@ void MicroscopeManagerGUI::startExperiment()
 
         mm->SetFilename(filepath);
         mm->CreateFile();
-        cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
+        cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo, stateAndDuration, odorants, true, framesPerVolume, volumesPerSecond, volumeScaleMin, volumeScaleMax, laserMode, laserPower,  experimentDescription);
 
         if (experimentSettingsDevice != "")
         {
