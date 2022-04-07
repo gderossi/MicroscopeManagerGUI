@@ -147,7 +147,7 @@ void AcquisitionDisplayThread::Acquire()
 			//memcpy(metadataBuffer, metadata, 512);
 
 			mm_->WriteFile((unsigned char*)metadata, 512);
-			mm_->WriteFile(mm_->GetImageBuffer(), mm_->GetImageBufferSize());
+			mm_->WriteFile(mm_->GetImageBuffer(), mm_->GetImageBufferSize(), true);
 
 			remainingStateImages--;
 			if (remainingStateImages == 0)

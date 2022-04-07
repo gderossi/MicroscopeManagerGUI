@@ -79,6 +79,9 @@
     <ClCompile Include="SerialQueueObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ProducerDisplayThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SerialConsoleThread.h">
@@ -91,6 +94,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SerialDeviceThread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProducerDisplayThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -101,6 +101,7 @@
     <ClCompile Include="DisplayThread.cpp" />
     <ClCompile Include="OdorantConfigBox.cpp" />
     <ClCompile Include="PixmapReadyObject.cpp" />
+    <ClCompile Include="ProducerDisplayThread.cpp" />
     <ClCompile Include="QtSerialConfigBox.cpp" />
     <ClCompile Include="RangeSlider.cpp" />
     <ClCompile Include="SerialConsoleThread.cpp" />
@@ -121,6 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AcquisitionDisplayThread.h" />
+    <ClInclude Include="ProducerDisplayThread.h" />
     <ClInclude Include="SerialDeviceThread.h" />
     <QtMoc Include="SerialQueueObject.h" />
     <QtMoc Include="StateConfigBox.h" />

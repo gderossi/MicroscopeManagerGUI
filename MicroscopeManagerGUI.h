@@ -4,8 +4,10 @@
 #include "ui_MicroscopeManagerGUI.h"
 #include "MicroscopeManager.h"
 #include "AcquisitionDisplayThread.h"
+#include "ProducerDisplayThread.h"
 #include <RangeSlider.h>
 #include "SerialQueueObject.h"
+#include "WriterThread.h"
 
 class MicroscopeManagerGUI : public QMainWindow
 {
