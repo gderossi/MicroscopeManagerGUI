@@ -10,6 +10,7 @@ public:
     ProducerDisplayThread(int bufsize, MicroscopeManager* mm, QObject* mainWindow, int* targetFrameInfo);
     ~ProducerDisplayThread();
     void StartThreads();
+    void WaitForThread();
     void processPixmap();
 
 private:
@@ -24,5 +25,6 @@ private:
     std::atomic_bool pixmapProcessed;
     PixmapReadyObject* pix_;
     unsigned long long bufferCount_;
+    bool endDisplay_;
 };
 

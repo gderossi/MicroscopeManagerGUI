@@ -202,25 +202,28 @@ void MicroscopeManagerGUI::acquireHelper()
 
 void MicroscopeManagerGUI::acquireStart()
 {
-    if (filepath == "")
+    /*if (filepath == "")
     {
         setFilename();
         if (filepath == "")
         {
             return;
         }
-    }
+    }*/
 
     ui.acquireButton->setText("Stop Acquisition");
     ui.liveViewButton->setEnabled(false);
     ui.snapImageButton->setEnabled(false);
     ui.setupExperimentButton->setEnabled(false);
 
-    mm->SetFilename(filepath);
-    mm->CreateFile();
+    //mm->SetFilename(filepath);
+    //mm->CreateFile();
     mm->StartAcquisition(GENTL_INFINITE);
     cameraThd = new ProducerDisplayThread(1920*1080, mm, this, targetFrameInfo);
-    ((ProducerDisplayThread*)cameraThd)->AddWriterThread(new WriterThread("D:/out1", 1920*1080, 0, (ProducerThread*)cameraThd, new RawImageManager("D:/out1")));
+    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out1"));
+    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out2"));
+    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out3"));
+    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out4"));
     ((ProducerDisplayThread*)cameraThd)->StartThreads();
     acquiring = true;
 }
@@ -622,7 +625,9 @@ void MicroscopeManagerGUI::startExperiment()
 
         mm->SetFilename(filepath);
         mm->CreateFile();
-        cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo, stateAndDuration, odorants, true, framesPerVolume, volumesPerSecond, volumeScaleMin, volumeScaleMax, laserMode, laserPower,  experimentDescription);
+        cameraThd = new ProducerDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo); // , stateAndDuration, odorants, true, framesPerVolume, volumesPerSecond, volumeScaleMin, volumeScaleMax, laserMode, laserPower, experimentDescription);
+
+        //CREATE WRITER THREADS HERE
 
         if (experimentSettingsDevice != "")
         {
