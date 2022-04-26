@@ -4,6 +4,8 @@ ProducerDisplayThread::ProducerDisplayThread(int bufsize, MicroscopeManager* mm,
 	ProducerThread(bufsize, mm),
 	mainWindow_(mainWindow),
 	targetFrameInfo_(targetFrameInfo),
+	frameCount_(targetFrameInfo[0]),
+	currentFrame_(targetFrameInfo[1]),
 	bufferCount_(0),
 	endDisplay_(false)
 {
@@ -19,6 +21,7 @@ ProducerDisplayThread::~ProducerDisplayThread()
 void ProducerDisplayThread::StartThreads()
 {
 	StartThread();
+	frameThd_ = std::thread(&ProducerDisplayThread::CheckFrameInfo, this);
 	disThd_ = std::thread(&ProducerDisplayThread::Display, this);
 }
 
@@ -30,8 +33,25 @@ void ProducerDisplayThread::WaitForThread()
 	}
 	pCV.notify_all();
 
+	frameThd_.join();
 	disThd_.join();
 	ProducerThread::WaitForThread();
+}
+
+void ProducerDisplayThread::CheckFrameInfo()
+{
+	while (active)
+	{
+		if (frameCount_ != targetFrameInfo_[0])
+		{
+			frameCount_ = targetFrameInfo_[0];
+		}
+
+		if (currentFrame_ != targetFrameInfo_[1])
+		{
+			currentFrame_ = targetFrameInfo_[1];
+		}
+	}
 }
 
 void ProducerDisplayThread::Display()
@@ -42,9 +62,9 @@ void ProducerDisplayThread::Display()
 
 	while (active)
 	{
-		if (targetFrameInfo_[1] < bufReadys.size())
+		if (currentFrame_ < bufReadys.size())
 		{
-			targetFrame = targetFrameInfo_[1];
+			targetFrame = currentFrame_;
 		}
 		else
 		{

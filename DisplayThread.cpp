@@ -5,7 +5,9 @@ DisplayThread::DisplayThread(unsigned long long bufferCount, MicroscopeManager* 
 	bufferCount_(bufferCount),
 	mm_(mm),
 	mainWindow_(mainWindow),
-	targetFrameInfo_(targetFrameInfo)
+	targetFrameInfo_(targetFrameInfo),
+	frameCount_(targetFrameInfo[0]),
+	currentFrame_(targetFrameInfo[1])
 {
 	width = mm->GetCameraIntParameter(STREAM_MODULE, "Width");
 	height = mm->GetCameraIntParameter(STREAM_MODULE, "Height");
@@ -13,6 +15,7 @@ DisplayThread::DisplayThread(unsigned long long bufferCount, MicroscopeManager* 
 
 	pix_ = new PixmapReadyObject();
 
+	frameThd_ = std::thread(&DisplayThread::CheckFrameInfo, this);
 	disThd_ = std::thread(&DisplayThread::Display, this);
 }
 
@@ -20,6 +23,22 @@ DisplayThread::~DisplayThread()
 {
 	delete[] buf_;
 	delete pix_;
+}
+
+void DisplayThread::CheckFrameInfo()   //This is super questionable, redesign at some point?
+{
+	while (active)
+	{
+		if (frameCount_ != targetFrameInfo_[0])
+		{
+			frameCount_ = targetFrameInfo_[0];
+		}
+
+		if (currentFrame_ != targetFrameInfo_[1])
+		{
+			currentFrame_ = targetFrameInfo_[1];
+		}
+	}
 }
 
 void DisplayThread::Display()
@@ -31,7 +50,7 @@ void DisplayThread::Display()
 		mm_->GetImage();
 		mm_->ApplyCameraMask();
 
-		if (bufferCount_ % targetFrameInfo_[0] == targetFrameInfo_[1])
+		if (bufferCount_ % frameCount_ == currentFrame_)
 		{
 			try
 			{
@@ -56,5 +75,6 @@ void DisplayThread::Display()
 
 void DisplayThread::WaitForThread()
 {
+	frameThd_.join();
 	disThd_.join();
 }

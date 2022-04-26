@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MMThread.h>
+#include "MMThread.h"
 #include "MicroscopeManager.h"
 #include "ui_MicroscopeManagerGUI.h"
 #include "PixmapReadyObject.h"
@@ -15,16 +15,20 @@ public:
 
 private:
     void Display();
+    void CheckFrameInfo();
 
     unsigned long long bufferCount_;
     std::thread disThd_;
+    std::thread frameThd_;
     MicroscopeManager* mm_;
     unsigned char* buf_;
-    QObject* mainWindow_;
     int* targetFrameInfo_;
+    QObject* mainWindow_;
     unsigned long long width;
     unsigned long long height;
     std::atomic_bool pixmapProcessed;
     PixmapReadyObject* pix_;
+    int frameCount_;
+    int currentFrame_;
 };
 

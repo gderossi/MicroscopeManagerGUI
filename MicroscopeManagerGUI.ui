@@ -437,6 +437,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="calibrateMaskButton">
+        <property name="text">
+         <string>Calibrate Camera Mask</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QFrame" name="experimentSettingsFrame">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -652,7 +659,7 @@
               <rect>
                <x>9</x>
                <y>9</y>
-               <width>201</width>
+               <width>203</width>
                <height>141</height>
               </rect>
              </property>

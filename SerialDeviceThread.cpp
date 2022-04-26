@@ -14,7 +14,8 @@ void SerialDeviceThread::Listen()
 		if (device_->Available())
 		{
 			serialQueue_->qMutex.lock();
-			serialQueue_->sendSignal(device_->ReadData(128));
+			std::string data = device_->ReadData(128);
+			serialQueue_->sendSignal(data);
 			serialQueue_->qMutex.unlock();
 		}
 	}

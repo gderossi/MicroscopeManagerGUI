@@ -38,6 +38,7 @@ private slots:
     void startExperiment();
     void stopExperiment();
     void setTargetFrame();
+    void calibrateCameraMask();
 
     void setFilename();
     void openConnectSerialDialog();

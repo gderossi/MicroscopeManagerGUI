@@ -16,6 +16,8 @@
 #define START_EXPERIMENT_DEVICE '0'
 #define LOCATE_EXPERIMENT_DEVICE '?'
 #define ABORT_EXPERIMENT '!'
+#define SERIAL_CONSOLE_MAX_CHARACTERS 1024
+#define MASK_IMAGES 10
 
 #define USE_CAMERA_MASK true
 
@@ -32,6 +34,7 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     imageCount(0),
     volumeScaleMin(0),
     volumeScaleMax(1),
+    laserMode(0),
     framesPerVolume(DEFAULT_FRAMES_PER_VOLUME),
     volumesPerSecond(DEFAULT_VOLUMES_PER_SECOND),
     scannerAmplitude(1)
@@ -92,6 +95,7 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     connect(ui.startExperimentButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::startExperiment);
     connect(ui.stopExperimentButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::stopExperiment);
     connect(ui.frameSelectSlider, &QSlider::valueChanged, this, &MicroscopeManagerGUI::setTargetFrame);
+    connect(ui.calibrateMaskButton, &QPushButton::clicked, this, &MicroscopeManagerGUI::calibrateCameraMask);
 
     //Experiment settings
     connect(volumeScale, &RangeSlider::lowerValueChanged, this, &MicroscopeManagerGUI::setVolumeScaleMin);
@@ -220,10 +224,7 @@ void MicroscopeManagerGUI::acquireStart()
     //mm->CreateFile();
     mm->StartAcquisition(GENTL_INFINITE);
     cameraThd = new ProducerDisplayThread(1920*1080, mm, this, targetFrameInfo);
-    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out1"));
-    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out2"));
-    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out3"));
-    new WriterThread((ProducerThread*)cameraThd, new RawImageManager("D:/out4"));
+    new WriterThread((ProducerThread*)cameraThd, new RawImageManager(filepath));
     ((ProducerDisplayThread*)cameraThd)->StartThreads();
     acquiring = true;
 }
@@ -239,7 +240,7 @@ void MicroscopeManagerGUI::acquireStop()
     }
 
     mm->StopAcquisition();
-    mm->CloseFile();
+    //mm->CloseFile();
 
     ui.acquireButton->setText("Start Acquisition");
     ui.liveViewButton->setEnabled(true);
@@ -393,9 +394,16 @@ void MicroscopeManagerGUI::readFromSerialDevice(std::string message)
         return;
     }
     std::string output;
-    output = message;
-    output += '\n';
-    output = ui.consoleOutput->text().toUtf8().constData() + output;
+
+    output = ui.consoleOutput->text().toUtf8().constData();
+    if (output.size() + message.size() + 1 > SERIAL_CONSOLE_MAX_CHARACTERS)
+    {
+        if (output != "")
+        {
+            output = output.substr(std::min(output.size()-1, output.find('\n', std::min(output.size()-1, message.size())) + 1), SERIAL_CONSOLE_MAX_CHARACTERS);
+        }
+    }
+    output += message + "\n";
     ui.consoleOutput->setText(output.c_str());
     ui.consoleOutput->adjustSize();
     ui.serialScrollAreaContents->setFixedHeight(ui.consoleOutput->height());
@@ -476,6 +484,11 @@ void MicroscopeManagerGUI::setTargetFrame()
     targetFrameInfo[1] = ui.frameSelectSlider->value();
 }
 
+void MicroscopeManagerGUI::calibrateCameraMask()
+{
+    mm->CreateCameraMask(MASK_IMAGES);
+}
+
 void MicroscopeManagerGUI::experimentSetup()
 {
     
@@ -504,8 +517,8 @@ void MicroscopeManagerGUI::experimentSetup()
             if (experimentSettingsDevice == "")
             {
                 //No experiment device found, info popup and return
-                QMessageBox::information(this, "", "Could not locate control device, experiment setup aborted");
-                return;
+                //QMessageBox::information(this, "", "Could not locate control device, experiment setup aborted");
+                //return;
             }
         }
 
@@ -623,11 +636,30 @@ void MicroscopeManagerGUI::startExperiment()
             delete cameraThd;
         }
 
-        mm->SetFilename(filepath);
-        mm->CreateFile();
-        cameraThd = new ProducerDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo); // , stateAndDuration, odorants, true, framesPerVolume, volumesPerSecond, volumeScaleMin, volumeScaleMax, laserMode, laserPower, experimentDescription);
+        //mm->SetFilename(filepath);
+        //mm->CreateFile();
+        cameraThd = new ProducerDisplayThread(1920*1080, mm, this, targetFrameInfo); // , stateAndDuration, odorants, true, framesPerVolume, volumesPerSecond, volumeScaleMin, volumeScaleMax, laserMode, laserPower, experimentDescription);
 
-        //CREATE WRITER THREADS HERE
+        //Create writer threads
+        if (laserMode == 0) //Both lasers
+        {
+            for (int laser = 1; laser <= 2; laser++)
+            {
+                for (int frame = 1; frame <= framesPerVolume; frame++)
+                {
+                    std::string filename = filepath + "_Laser" + std::to_string(laser) + "_Frame" + std::to_string(frame);
+                    new WriterThread((ProducerThread*)cameraThd, new RawImageManager(filename));
+                }
+            }
+        }
+        else
+        {
+            for (int frame = 1; frame <= framesPerVolume; frame++)
+            {
+                std::string filename = filepath + "_Laser" + std::to_string(laserMode) + "_Frame" + std::to_string(frame);
+                new WriterThread((ProducerThread*)cameraThd, new RawImageManager(filename));
+            }
+        }
 
         if (experimentSettingsDevice != "")
         {
@@ -637,6 +669,7 @@ void MicroscopeManagerGUI::startExperiment()
             mm->SerialWrite(experimentSettingsDevice, startCommand.c_str(), startCommand.size());
         }
 
+        ((ProducerDisplayThread*)cameraThd)->StartThreads();
         acquiring = true;
         ui.startExperimentButton->setEnabled(false);
 
@@ -672,7 +705,7 @@ void MicroscopeManagerGUI::stopExperiment()
     }
 
     mm->StopAcquisition();
-    mm->CloseFile();
+    //mm->CloseFile();
 
     //Enable changing odorants and states
     ui.shuffleOdorantsButton->setEnabled(true);

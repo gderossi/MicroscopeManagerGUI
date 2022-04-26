@@ -14,6 +14,7 @@ public:
     void processPixmap();
 
 private:
+    void CheckFrameInfo();
     void Display();
 
     std::thread disThd_;
@@ -26,5 +27,8 @@ private:
     PixmapReadyObject* pix_;
     unsigned long long bufferCount_;
     bool endDisplay_;
+    int frameCount_;
+    int currentFrame_;
+    std::thread frameThd_;
 };
 
