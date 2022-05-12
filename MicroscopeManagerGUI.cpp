@@ -49,6 +49,8 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     width = mm->GetCameraIntParameter(STREAM_MODULE, "Width");
     height = mm->GetCameraIntParameter(STREAM_MODULE, "Height");
 
+    //float frameRate = mm->GetCameraFloatParameter(REMOTE_MODULE, "AcquisitionFrameRate");
+
     buf = new unsigned char[width * height];
 
     ui.experimentButtonsFrame->setVisible(false);
@@ -71,9 +73,10 @@ MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     ui.scannerAmplitudeDoubleSpinBox->setValue(scannerAmplitude);
     ui.frameSelectSlider->setMaximum(framesPerVolume-1);
 
-    targetFrameInfo = new int[2];
+    targetFrameInfo = new int[3];
     targetFrameInfo[0] = framesPerVolume;
     targetFrameInfo[1] = 0;
+    targetFrameInfo[2] = volumesPerSecond;
 
     //File menu
     connect(ui.action_Filename, &QAction::triggered, this, &MicroscopeManagerGUI::setFilename);
@@ -223,6 +226,7 @@ void MicroscopeManagerGUI::acquireStart()
     //mm->SetFilename(filepath);
     //mm->CreateFile();
     mm->StartAcquisition(GENTL_INFINITE);
+    //cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
     cameraThd = new ProducerThread(1920*1080, mm/*, this, targetFrameInfo*/);
     new WriterThread((ProducerThread*)cameraThd, new TIFFImageManager(filepath));
     ((ProducerThread*)cameraThd)->StartThread();
@@ -240,13 +244,15 @@ void MicroscopeManagerGUI::acquireStop()
     }
 
     mm->StopAcquisition();
-    //mm->CloseFile();
+    mm->CloseFile();
 
     ui.acquireButton->setText("Start Acquisition");
     ui.liveViewButton->setEnabled(true);
     ui.snapImageButton->setEnabled(true);
     ui.setupExperimentButton->setEnabled(true);
     acquiring = false;
+
+    //float frameRate = mm->GetCameraFloatParameter(REMOTE_MODULE, "AcquisitionFrameRate");
 }
 
 void MicroscopeManagerGUI::liveHelper()
@@ -638,7 +644,7 @@ void MicroscopeManagerGUI::startExperiment()
 
         //mm->SetFilename(filepath);
         //mm->CreateFile();
-        cameraThd = new ProducerThread(1920*1080, mm/*, this, targetFrameInfo*/); // , stateAndDuration, odorants, true, framesPerVolume, volumesPerSecond, volumeScaleMin, volumeScaleMax, laserMode, laserPower, experimentDescription);
+        cameraThd = new ProducerDisplayThread(1920*1080, mm, this, targetFrameInfo); // , stateAndDuration, odorants, true, framesPerVolume, volumesPerSecond, volumeScaleMin, volumeScaleMax, laserMode, laserPower, experimentDescription);
 
         //Create writer threads
         if (laserMode == 0) //Both lasers
@@ -648,7 +654,7 @@ void MicroscopeManagerGUI::startExperiment()
                 for (int frame = 1; frame <= framesPerVolume; frame++)
                 {
                     std::string filename = filepath + "_Laser" + std::to_string(laser) + "_Frame" + std::to_string(frame);
-                    new WriterThread((ProducerThread*)cameraThd, new TIFFImageManager(filename));
+                    new WriterThread((ProducerThread*)cameraThd, new RawImageManager(filename));
                 }
             }
         }
@@ -657,7 +663,7 @@ void MicroscopeManagerGUI::startExperiment()
             for (int frame = 1; frame <= framesPerVolume; frame++)
             {
                 std::string filename = filepath + "_Laser" + std::to_string(laserMode) + "_Frame" + std::to_string(frame);
-                new WriterThread((ProducerThread*)cameraThd, new TIFFImageManager(filename));
+                new WriterThread((ProducerThread*)cameraThd, new RawImageManager(filename));
             }
         }
 
@@ -669,7 +675,7 @@ void MicroscopeManagerGUI::startExperiment()
             mm->SerialWrite(experimentSettingsDevice, startCommand.c_str(), startCommand.size());
         }
 
-        ((ProducerThread*)cameraThd)->StartThread();
+        ((ProducerDisplayThread*)cameraThd)->StartThreads();
         acquiring = true;
         ui.startExperimentButton->setEnabled(false);
 
@@ -688,20 +694,20 @@ void MicroscopeManagerGUI::stopExperiment()
     acquiring = false;
     experimentActive = false;
 
-    if (experimentSettingsDevice != "")
-    {
-        std::string stopCommand = "";
-        stopCommand += ABORT_EXPERIMENT;
-        stopCommand += '\r';
-        mm->SerialWrite(experimentSettingsDevice, stopCommand.c_str(), stopCommand.size());
-    }
-
     if (cameraThd)
     {
         cameraThd->StopThread();
         cameraThd->WaitForThread();
         delete cameraThd;
         cameraThd = NULL;
+    }
+
+    if (experimentSettingsDevice != "")
+    {
+        std::string stopCommand = "";
+        stopCommand += ABORT_EXPERIMENT;
+        stopCommand += '\r';
+        mm->SerialWrite(experimentSettingsDevice, stopCommand.c_str(), stopCommand.size());
     }
 
     mm->StopAcquisition();
@@ -792,6 +798,7 @@ void MicroscopeManagerGUI::updateDisplayFrame(const QPixmap & pixmap, bool acq)
     }*/
 }
 
+//PRIVATE FUNCTIONS
 
 void MicroscopeManagerGUI::writeExperimentParameter(char parameter, std::string data)
 {
@@ -820,6 +827,6 @@ void MicroscopeManagerGUI::startupMenu()
 void MicroscopeManagerGUI::defaultStartup()
 {
     mm->CreateImageManager("TIFF", NULL);
-    mm->CreateCameraManager("EGrabber", NULL);
+    mm->CreateCameraManager("Test", NULL);
     mm->CreateSerialManager("Windows", NULL);
 }

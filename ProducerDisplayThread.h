@@ -23,12 +23,14 @@ private:
     int* targetFrameInfo_;
     unsigned long long width;
     unsigned long long height;
+    float framerate;
     std::atomic_bool pixmapProcessed;
     PixmapReadyObject* pix_;
     unsigned long long bufferCount_;
     bool endDisplay_;
     int frameCount_;
     int currentFrame_;
+    int framesToDrop_;
     std::thread frameThd_;
 };
 

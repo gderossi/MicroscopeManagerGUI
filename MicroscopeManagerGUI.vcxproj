@@ -68,12 +68,22 @@
       <AdditionalDependencies>MicroscopeManager.lib;bpImarisWriter96.lib;ImarisWriter_static.lib;Spinnaker_v140.lib;serial.lib;tiffd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Link>
+      <AdditionalDependencies>MicroscopeManager.lib;bpImarisWriter96.lib;ImarisWriter_static.lib;Spinnaker_v140.lib;serial.lib;tiffd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\src\ImarisWriter\release\Debug;C:\Users\ramanlab\source\repos\MicroscopeManager\x64\Release;C:\Program Files\FLIR Systems\Spinnaker\lib64\vs2015;C:\src\serial\serial\visual_studio\x64\Debug;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\tools\Debug;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\libtiff\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Program Files\Euresys\eGrabber\include;C:\Users\ramanlab\source\repos\MicroscopeManager\MicroscopeManager;C:\src\ImarisWriter\interface;.\;C:\Program Files\FLIR Systems\Spinnaker\include;C:\src\serial\serial\include;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\libtiff;C:\Users\ramanlab\src\tiff-4.3.0\libtiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
     <ClCompile>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>

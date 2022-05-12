@@ -26,9 +26,12 @@ private:
     QObject* mainWindow_;
     unsigned long long width;
     unsigned long long height;
+    float framerate;
     std::atomic_bool pixmapProcessed;
     PixmapReadyObject* pix_;
     int frameCount_;
+    int volumeCount_;
     int currentFrame_;
+    int framesToDrop_;
 };
 
