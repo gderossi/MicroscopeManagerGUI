@@ -182,6 +182,7 @@ void MicroscopeManagerGUI::snapImage()
     mm->SetFilename(imageCountFilepath);
     mm->CreateFile();
 
+    mm->SetCameraStringParameter(REMOTE_MODULE, "AcquisitionMode", "Continuous");
     mm->SnapImage();
     if (USE_CAMERA_MASK)
     {
@@ -225,6 +226,7 @@ void MicroscopeManagerGUI::acquireStart()
 
     //mm->SetFilename(filepath);
     //mm->CreateFile();
+    mm->SetCameraStringParameter(REMOTE_MODULE, "AcquisitionMode", "Continuous");
     mm->StartAcquisition(GENTL_INFINITE);
     //cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
     cameraThd = new ProducerThread(1920*1080, mm/*, this, targetFrameInfo*/);
@@ -274,6 +276,7 @@ void MicroscopeManagerGUI::liveStart()
     ui.acquireButton->setEnabled(false);
     ui.setupExperimentButton->setEnabled(false);
 
+    mm->SetCameraStringParameter(REMOTE_MODULE, "AcquisitionMode", "Continuous");
     mm->StartAcquisition(GENTL_INFINITE);
     cameraThd = new DisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
     acquiring = true;
@@ -610,6 +613,7 @@ void MicroscopeManagerGUI::experimentSetup()
         mm->SerialWrite(experimentSettingsDevice, command.c_str(), command.size());
 
         //Start live camera view
+        mm->SetCameraStringParameter(REMOTE_MODULE, "AcquisitionMode", "SingleFrame");
         mm->StartAcquisition(GENTL_INFINITE);
         cameraThd = new DisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
 
