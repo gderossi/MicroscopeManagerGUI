@@ -230,7 +230,8 @@ void MicroscopeManagerGUI::acquireStart()
     mm->StartAcquisition(GENTL_INFINITE);
     //cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
     cameraThd = new ProducerThread(mm->GetCameraIntParameter(STREAM_MODULE, "Width")* mm->GetCameraIntParameter(STREAM_MODULE, "Height"), mm/*, this, targetFrameInfo*/);
-    new WriterThread((ProducerThread*)cameraThd, new TIFFImageManager(filepath, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height")));
+    new WriterThread((ProducerThread*)cameraThd, new HDF5ImageManager(filepath/*, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height")*/));
+    new WriterThread((ProducerThread*)cameraThd, new HDF5ImageManager(filepath+"_2"/*, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height")*/));
     ((ProducerThread*)cameraThd)->StartThread();
     acquiring = true;
 }

@@ -60,12 +60,12 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\Program Files\Euresys\eGrabber\include;C:\Users\ramanlab\source\repos\MicroscopeManager\MicroscopeManager;C:\src\ImarisWriter\interface;.\;C:\Program Files\FLIR Systems\Spinnaker\include;C:\src\serial\serial\include;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\libtiff;C:\Users\ramanlab\src\tiff-4.3.0\libtiff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Program Files\Euresys\eGrabber\include;C:\Users\ramanlab\source\repos\MicroscopeManager\MicroscopeManager;C:\src\ImarisWriter\interface;.\;C:\Program Files\FLIR Systems\Spinnaker\include;C:\src\serial\serial\include;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\libtiff;C:\Users\ramanlab\src\tiff-4.3.0\libtiff;C:\Users\ramanlab\src\CMake-hdf5-1.13.0\hdf5-1.13.0\src;C:\Users\ramanlab\src\CMake-hdf5-1.13.0\hdf5-1.13.0\c++\src;C:\Users\ramanlab\src\CMake-hdf5-1.13.0\build\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>C:\src\ImarisWriter\release\Debug;C:\Users\ramanlab\source\repos\MicroscopeManager\x64\Debug;C:\Program Files\FLIR Systems\Spinnaker\lib64\vs2015;C:\src\serial\serial\visual_studio\x64\Debug;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\tools\Debug;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\libtiff\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>MicroscopeManager.lib;bpImarisWriter96.lib;ImarisWriter_static.lib;Spinnaker_v140.lib;serial.lib;tiffd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\src\ImarisWriter\release\Debug;C:\Users\ramanlab\source\repos\MicroscopeManager\x64\Debug;C:\Program Files\FLIR Systems\Spinnaker\lib64\vs2015;C:\src\serial\serial\visual_studio\x64\Debug;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\tools\Debug;C:\Users\ramanlab\src\tiff-4.3.0\buildx86\libtiff\Debug;C:\Users\ramanlab\src\CMake-hdf5-1.13.0\build\bin\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>MicroscopeManager.lib;bpImarisWriter96.lib;ImarisWriter_static.lib;Spinnaker_v140.lib;serial.lib;tiffd.lib;libhdf5_hl_cpp_D.lib;libhdf5_cpp_D.lib;libhdf5_tools_D.lib;hdf5_hl_cpp_D.lib;hdf5_tools_D.lib;hdf5_hl_D.lib;libhdf5_hl_D.lib;libhdf5_test_D.lib;hdf5_test_D.lib;libhdf5_D.lib;hdf5_D.lib;hdf5_cpp_D.lib;C:\Users\ramanlab\src\CMake-hdf5-1.13.0\build\bin\Debug\*.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
