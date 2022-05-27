@@ -24,6 +24,7 @@
 MicroscopeManagerGUI::MicroscopeManagerGUI(QWidget* parent) :
     QMainWindow(parent),
     mm(new MicroscopeManager("D:/test")),
+    imageManagerType(""),
     serialQueue(new SerialQueueObject(this)),
     buf(NULL),
     cameraThd(NULL),
@@ -161,7 +162,7 @@ void MicroscopeManagerGUI::readConfig()
     else
     {
         cfg.ReadConfigFile(configFile, mm, &ui, this);
-        cfg.GetExperimentSettings(&volumeScaleMin, &volumeScaleMax, &framesPerVolume, &volumesPerSecond, &laserMode, &scannerAmplitude, &experimentSettingsDevice);
+        cfg.GetExperimentSettings(&volumeScaleMin, &volumeScaleMax, &framesPerVolume, &volumesPerSecond, &laserMode, &scannerAmplitude, &experimentSettingsDevice, &imageManagerType);
     }
 }
 
@@ -230,8 +231,21 @@ void MicroscopeManagerGUI::acquireStart()
     mm->StartAcquisition(GENTL_INFINITE);
     //cameraThd = new AcquisitionDisplayThread(GENTL_INFINITE, mm, this, targetFrameInfo);
     cameraThd = new ProducerThread(mm->GetCameraIntParameter(STREAM_MODULE, "Width")* mm->GetCameraIntParameter(STREAM_MODULE, "Height"), mm/*, this, targetFrameInfo*/);
-    new WriterThread((ProducerThread*)cameraThd, new HDF5ImageManager(filepath/*, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height")*/));
-    new WriterThread((ProducerThread*)cameraThd, new HDF5ImageManager(filepath+"_2"/*, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height")*/));
+    
+    ImageManager* imageManager;
+    if (imageManagerType == "Raw")
+    {
+        imageManager = new RawImageManager(filepath);
+    }
+    else if (imageManagerType == "TIFF")
+    {
+        imageManager = new TIFFImageManager(filepath, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height"));
+    }
+    else if (imageManagerType == "HDF5")
+    {
+        imageManager = new HDF5ImageManager(filepath, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height"));
+    }
+    new WriterThread((ProducerThread*)cameraThd, imageManager);
     ((ProducerThread*)cameraThd)->StartThread();
     acquiring = true;
 }
@@ -659,7 +673,22 @@ void MicroscopeManagerGUI::startExperiment()
                 for (int frame = 1; frame <= framesPerVolume; frame++)
                 {
                     std::string filename = filepath + "_Laser" + std::to_string(laser) + "_Frame" + std::to_string(frame);
-                    new WriterThread((ProducerThread*)cameraThd, new RawImageManager(filename));
+
+                    ImageManager* imageManager;
+                    if (imageManagerType == "Raw")
+                    {
+                        imageManager = new RawImageManager(filename);
+                    }
+                    else if (imageManagerType == "TIFF")
+                    {
+                        imageManager = new TIFFImageManager(filename, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height"));
+                    }
+                    else if (imageManagerType == "HDF5")
+                    {
+                        imageManager = new HDF5ImageManager(filename, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height"));
+                    }
+
+                    new WriterThread((ProducerThread*)cameraThd, imageManager);
                 }
             }
         }
@@ -668,7 +697,22 @@ void MicroscopeManagerGUI::startExperiment()
             for (int frame = 1; frame <= framesPerVolume; frame++)
             {
                 std::string filename = filepath + "_Laser" + std::to_string(laserMode) + "_Frame" + std::to_string(frame);
-                new WriterThread((ProducerThread*)cameraThd, new RawImageManager(filename));
+
+                ImageManager* imageManager;
+                if (imageManagerType == "Raw")
+                {
+                    imageManager = new RawImageManager(filename);
+                }
+                else if (imageManagerType == "TIFF")
+                {
+                    imageManager = new TIFFImageManager(filename, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height"));
+                }
+                else if (imageManagerType == "HDF5")
+                {
+                    imageManager = new HDF5ImageManager(filename, mm->GetCameraIntParameter(STREAM_MODULE, "Width"), mm->GetCameraIntParameter(STREAM_MODULE, "Height"));
+                }
+
+                new WriterThread((ProducerThread*)cameraThd, imageManager);
             }
         }
 
@@ -831,7 +875,8 @@ void MicroscopeManagerGUI::startupMenu()
 
 void MicroscopeManagerGUI::defaultStartup()
 {
-    mm->CreateImageManager("TIFF", NULL);
+    mm->CreateImageManager("Raw", NULL);
+    imageManagerType = "Raw";
     mm->CreateCameraManager("Test", NULL);
     mm->CreateSerialManager("Windows", NULL);
 }

@@ -21,7 +21,7 @@ public:
 	ConfigManager();
 	void WriteConfigFile(std::string filename, Ui::ConfigDialog* cfg);
 	void ReadConfigFile(std::string filename, MicroscopeManager* mm, Ui::MicroscopeManagerGUIClass* ui, QObject* mainWindow);
-	void GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, int *lm, double* sa, std::string* exp);
+	void GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, int *lm, double* sa, std::string* exp, std::string* expMan);
 
 signals:
 	void serialDeviceReady(std::string, std::string, int, std::vector<std::string>, std::vector<std::string> startCommands);
@@ -34,5 +34,6 @@ private:
 	int laserMode;
 	double scannerAmplitude;
 	std::string experimentDevice;
+	std::string imageManager;
 };
 

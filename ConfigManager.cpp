@@ -245,6 +245,7 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 			{
 				getline(file, line);
 				mm->CreateImageManager(line, NULL);
+				imageManager = line;
 
 				getline(file, line);
 				mm->CreateCameraManager(line, NULL);
@@ -388,7 +389,7 @@ void ConfigManager::ReadConfigFile(std::string filename, MicroscopeManager* mm, 
 	}
 }
 
-void ConfigManager::GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, int* lm, double* sa, std::string* exp)
+void ConfigManager::GetExperimentSettings(double* vsMin, double* vsMax, int* fpv, int* vps, int* lm, double* sa, std::string* exp, std::string* imMan)
 {
 	if (volumeScaleMin != -1)
 	{
@@ -417,5 +418,9 @@ void ConfigManager::GetExperimentSettings(double* vsMin, double* vsMax, int* fpv
 	if (experimentDevice != "")
 	{
 		*exp = experimentDevice;
+	}
+	if (imageManager != "")
+	{
+		*imMan = imageManager;
 	}
 }

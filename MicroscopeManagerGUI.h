@@ -66,6 +66,7 @@ private:
 
     Ui::MicroscopeManagerGUIClass ui;
     MicroscopeManager* mm;
+    std::string imageManagerType;
     std::string configFile;
     unsigned char * buf;
     QImage img;
